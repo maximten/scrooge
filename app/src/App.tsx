@@ -3,40 +3,39 @@ import { BarChart, Bar, Tooltip, Legend, ReferenceLine, CartesianGrid, XAxis, YA
 
 type Range = Record<number, number[]>
 
+type SymbolDetailing = Record<string, Record<string, string>>
+
+type DetailingResponse = {
+  transactions: Record<string, SymbolDetailing>,
+  total: Record<string, string>
+}
+
 const COLORS = ["f94144", "f8961e", "f9844a", "f9c74f", "90be6d", "43aa8b", "4d908e", "577590", "277da1", "f3722c"]
 
 function App() {
   const [range, setRange] = useState<Range>({})
   const [detailing, setDetailing] = useState<any>()
   const [categories, setCategories] = useState<string[]>()
+  const [total, setTotal] = useState<Record<string, string>>()
   const handleMonth = useCallback(async (e, year, month) => {
     e.preventDefault()
     const res = await fetch(`http://localhost:8080/month?year=${year}&month=${month}`)
-    const data: {
-      _id: number, 
-      detailing: {
-        category: string,
-        sum: {
-          $numberDecimal: string
-        },
-        symbol: string
-      }[]
-    }[] = await res.json()
+    const data: DetailingResponse = await res.json()
     const categories: Record<string, string> = {}
-    const graphData = data
-      .sort((a, b) => a._id - b._id)
-      .map(item => {
-        const result: any = {
-          day: item._id
-        }
-        item.detailing.forEach(category => {
-          result[category.category] = category.sum.$numberDecimal
-          categories[category.category] = category.category
-        })
-        return result
+    const days = Object.entries(data.transactions["sumUSD"]).reduce((carry, [day, dayCategories]) => {
+      carry.push({
+        ...dayCategories,
+        day
       })
-    setDetailing(graphData)
+      Object.keys(dayCategories).forEach(c => {
+        categories[c] = c
+      })
+      return carry
+    }, [] as any)
+    console.log()
+    setDetailing(days)
     setCategories(Object.values(categories))
+    setTotal(data.total)
   }, [])
   useEffect(() => {
     const fetchRange = async () => {
@@ -86,6 +85,16 @@ function App() {
           </BarChart>
         )
       }
+      <div>
+        {
+          total && (
+            <>
+              <h2>TOTAL</h2>
+              {total["sumUSD"]} $
+            </>            
+          )
+        }
+      </div>
     </div>
   );
 }
