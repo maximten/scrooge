@@ -2,7 +2,7 @@ import bodyParser from "body-parser"
 import cors from "cors"
 import express from "express"
 import mongoose from "mongoose"
-import { getMonthDetailing, getMonthRange } from "./controllers"
+import { getMonthDetailing, getMonthRange, getTotal } from "./controllers"
 
 export const initApp = async () => {
     const app = express()
@@ -25,6 +25,11 @@ export const initApp = async () => {
         }
         const detailing = await getMonthDetailing(yearNum, monthNum)
         res.send(detailing)
+    })
+    app.get("/total", async (req, res) => {
+        const date = new Date()
+        const total = await getTotal(date)
+        res.send(total)
     })
     app.listen(8080, () => {
         console.log('listening on 8080')

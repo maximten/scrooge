@@ -10,13 +10,20 @@ type DetailingResponse = {
   total: Record<string, string>
 }
 
+type TotalResponse = {
+  sums: Record<string, string>
+  totalUSD: string
+}
+
 const COLORS = ["f94144", "f8961e", "f9844a", "f9c74f", "90be6d", "43aa8b", "4d908e", "577590", "277da1", "f3722c"]
 
 function App() {
   const [range, setRange] = useState<Range>({})
   const [detailing, setDetailing] = useState<any>()
   const [categories, setCategories] = useState<string[]>()
-  const [total, setTotal] = useState<Record<string, string>>()
+  const [monthTotal, setMonthTotal] = useState<Record<string, string>>()
+  const [total, setTotal] = useState<TotalResponse>()
+
   const handleMonth = useCallback(async (e, year, month) => {
     e.preventDefault()
     const res = await fetch(`http://localhost:8080/month?year=${year}&month=${month}`)
@@ -35,8 +42,9 @@ function App() {
     console.log()
     setDetailing(days)
     setCategories(Object.values(categories))
-    setTotal(data.total)
+    setMonthTotal(data.total)
   }, [])
+
   useEffect(() => {
     const fetchRange = async () => {
       const res = await fetch("http://localhost:8080/range")
@@ -51,49 +59,66 @@ function App() {
       Object.values(range).forEach(monthsList => monthsList.sort((a, b) => a - b))
       setRange(range)
     }
+    const fetchTotal = async () => {
+      const res = await fetch("http://localhost:8080/total")
+      const data: TotalResponse = await res.json()
+      setTotal(data)
+    }
     fetchRange()
+    fetchTotal()
   }, [])
   return (
-    <div style={{display: "flex"}}>
-      <ul>
-        {
-          Object.entries(range).map(([year, monthsList]) => (
-            <li key={year}>
-              <ul>
-                { monthsList.map(month => (
-                  <li key={month}>
-                    <a href="#" onClick={(e) => handleMonth(e, year, month)}>{`${year}-${month}`}</a>
-                  </li>
-                )) }
-              </ul>
-            </li>
-          ))
-        }
-      </ul>
+    <div>
       {
-        detailing && categories && (
-          <BarChart width={800} height={800} data={detailing}>
-            {categories.map((category, index) => (
-              <Bar dataKey={category} fill={`#${COLORS[index % COLORS.length]}`} stackId="stack" />
-            )) }
-            <Tooltip />
-            <Legend />
-            <ReferenceLine y={0} stroke="#000" />
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="day" />
-            <YAxis />
-          </BarChart>
-        )
+        total && 
+        <div>
+          <h1>Total</h1>
+            {Object.entries(total.sums).map(([symbol, sum]) => (<div key={symbol}>{`${sum} ${symbol}`}</div>)) }
+          <h2>Converted sum</h2>
+            <div>{total.totalUSD} $</div>
+        </div>
       }
-      <div>
+      <div style={{display: "flex"}}>
+        <ul>
+          {
+            Object.entries(range).map(([year, monthsList]) => (
+              <li key={year}>
+                <ul>
+                  { monthsList.map(month => (
+                    <li key={month}>
+                      <a href="#" onClick={(e) => handleMonth(e, year, month)}>{`${year}-${month}`}</a>
+                    </li>
+                  )) }
+                </ul>
+              </li>
+            ))
+          }
+        </ul>
         {
-          total && (
-            <>
-              <h2>TOTAL</h2>
-              {total["sumUSD"]} $
-            </>            
+          detailing && categories && (
+            <BarChart width={800} height={800} data={detailing}>
+              {categories.map((category, index) => (
+                <Bar key={category} dataKey={category} fill={`#${COLORS[index % COLORS.length]}`} stackId="stack" />
+              )) }
+              <Tooltip />
+              <Legend />
+              <ReferenceLine y={0} stroke="#000" />
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="day" />
+              <YAxis />
+            </BarChart>
           )
         }
+        <div>
+          {
+            monthTotal && (
+              <>
+                <h2>Month Total</h2>
+                {monthTotal["sumUSD"]} $
+              </>            
+            )
+          }
+        </div>
       </div>
     </div>
   );

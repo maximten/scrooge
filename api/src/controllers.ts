@@ -114,3 +114,32 @@ export const getMonthDetailing = async (year: number, month: number) => {
     total.sumUSD = totalSumUSD
     return { transactions, total }
 }
+
+export const getTotal = async (date: Date) => {
+    const sums: { _id: string, sum: mongoose.Types.Decimal128 }[] = await Transaction.aggregate([
+        { $match: { date: { $lte: date } } },
+        { $group: { _id: "$symbol", sum: { $sum: "$amount" } } }
+    ])
+    const rates: { 
+        _id: string, 
+        rate: mongoose.Types.Decimal128
+    }[] = await ExchangeRateUSD.aggregate([
+        { $sort: { date: -1 } },
+        { $group: { _id: "$symbol", rate: { $first: '$rate' } } }
+    ])
+    const ratesMap = rates.reduce((carry, r) => {
+        carry[r._id] = r.rate
+        return carry
+    }, {} as Record<string, mongoose.Types.Decimal128>)
+    const totalUSD = sums.reduce((carry, s) => {
+        const rate = ratesMap[s._id]
+        const convertedSum = s._id === "USD" ? s.sum.toString() 
+            : bigDecimal.divide(s.sum.toString(), rate.toString(), 2)
+        return bigDecimal.add(carry, convertedSum)
+    }, "0")
+    const sumsMap = sums.reduce((carry, s) => {
+        carry[s._id] = s.sum.toString()
+        return carry
+    }, {} as Record<string, string>)
+    return { sums: sumsMap, totalUSD }
+}

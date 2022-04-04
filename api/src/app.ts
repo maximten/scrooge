@@ -1,12 +1,8 @@
 require("dotenv").config()
 import mongoose from "mongoose";
-import express from "express"
-import bodyParser from "body-parser";
-import cors from "cors"
+import { getTotal } from "./controllers";
 import { ExchangeRateUSD, Transaction, BalanceTotal } from "./models";
-import { getMonthRange } from "./controllers";
 import { initApp } from "./routes";
-import bigDecimal from "js-big-decimal";
 
 const getDateRange = async () => {
     const [{max, min}] = await Transaction.aggregate([{ $group: { _id: null, max: { $max: "$date" }, min: { $min: "$date" } } }])
@@ -137,10 +133,10 @@ const getSymbolRateAtDate = async (date: Date, symbol: string) => {
 
 const test = async () => {
     await mongoose.connect(`mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@localhost/scrooge`)
-    // const date = new Date(2022, 2, 3)
-    // const sums = await getDaySum(date)
-    // await saveDaySum(date, sums)
-    // await initMonthDaysSum(2022, 2)
+    const date = new Date()
+    await getTotal(date)
+    // await getTotal(date)
+
 }
 
 const init = async () => {
