@@ -8,10 +8,12 @@ const transactionSchema = new mongoose.Schema({
 });
 
 const exchangeRateUSDSchema = new mongoose.Schema({
-  date: Date,
-  symbol: String,
-  rate: mongoose.Types.Decimal128,
+  date: { type: Date, required: true },
+  symbol: { type: String, required: true },
+  rate: { type: mongoose.Types.Decimal128, required: true },
 });
+
+exchangeRateUSDSchema.index({ date: 1, symbol: 1 }, { unique: true });
 
 const balanceTotalSchema = new mongoose.Schema({
   dateType: String,
