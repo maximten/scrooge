@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import * as fs from 'fs';
-import { ExchangeRateUSD } from './models';
+import { ExchangeRateUSD, Transaction } from './models';
 import { getTotal } from './controllers';
 
 export const printHelp = () => {
@@ -48,8 +48,29 @@ export const importRatesCommand = async () => {
   await ExchangeRateUSD.insertMany(rates);
 };
 
+const getArgsForAddTransactionCommand = () => {
+  if (process.argv.length < 7) {
+    printHelp();
+    process.exit(0);
+  }
+  const [, , , date, symbol, amount, category] = process.argv;
+  return {
+    date, symbol, amount, category,
+  };
+};
 export const addTransactionCommand = async () => {
-
+  const {
+    date, symbol, amount, category,
+  } = getArgsForAddTransactionCommand();
+  const dateObj = new Date(date);
+  await mongoose.connect(`mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@localhost/scrooge`);
+  const transaction = new Transaction({
+    date: dateObj,
+    amount,
+    symbol,
+    category,
+  });
+  await transaction.save();
 };
 export const importTransactionsCommand = async () => {
 
