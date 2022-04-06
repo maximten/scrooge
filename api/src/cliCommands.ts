@@ -20,7 +20,7 @@ const getArgsForImportRates = () => {
   const [, , , symbol, filename] = process.argv;
   return { symbol, filename };
 };
-const extractData = (filename: string) => {
+const extractDataFromCsv = (filename: string) => {
   const buffer = fs.readFileSync(filename);
   const dataString = buffer.toString();
   const rows = dataString.split('\n');
@@ -34,12 +34,14 @@ const extractData = (filename: string) => {
     carry.push(item);
     return carry;
   }, [] as Record<string, string>[]);
-  return data.filter((item) => item.Date !== 'null' && item.Close !== 'null');
+  return data;
 };
+const filterDataForImportRates = (data: Record<string, string>[]) => data.filter((item) => item.Date !== 'null' && item.Close !== 'null');
 export const importRatesCommand = async () => {
   const { symbol, filename } = getArgsForImportRates();
-  const data = extractData(filename);
-  const rates = data.map((item) => ({
+  const data = extractDataFromCsv(filename);
+  const filteredData = filterDataForImportRates(data);
+  const rates = filteredData.map((item) => ({
     date: new Date(item.Date),
     symbol,
     rate: item.Close,
@@ -72,8 +74,22 @@ export const addTransactionCommand = async () => {
   });
   await transaction.save();
 };
-export const importTransactionsCommand = async () => {
 
+const getArgsForImportTransactionsCommand = () => {
+  if (process.argv.length < 4) {
+    printHelp();
+    process.exit(0);
+  }
+  const [, , , filename] = process.argv;
+  return {
+    filename,
+  };
+};
+export const importTransactionsCommand = async () => {
+  const { filename } = getArgsForImportTransactionsCommand();
+  const data = extractDataFromCsv(filename);
+  await mongoose.connect(`mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@localhost/scrooge`);
+  await Transaction.insertMany(data);
 };
 export const getTotalCommand = async () => {
   await mongoose.connect(`mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@localhost/scrooge`);

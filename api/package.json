@@ -17,8 +17,8 @@
   "scripts": {
     "start": "TZ='Etc/Zulu' ts-node src/api.ts",
     "importRates": "TZ='Etc/Zulu' ts-node src/cli.ts importRates",
-    "addTransaction": "TZ='Etc/Zulu' ts-node src/cli.ts addTransaction",
-    "importTransactions": "TZ='Etc/Zulu' ts-node src/cli.ts importTransactions",
+    "addTransaction": "ts-node src/cli.ts addTransaction",
+    "importTransactions": "ts-node src/cli.ts importTransactions",
     "getTotal": "TZ='Etc/Zulu' ts-node src/cli.ts getTotal"
   },
   "devDependencies": {
