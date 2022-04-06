@@ -30,6 +30,9 @@ type ExchangeRateMap = Record<string, Record<number, {
 }>>;
 
 const getExchangeRate = (exchangesMap: ExchangeRateMap, symbol: string, day: number) => {
+  if (['USD', 'USDT'].includes(symbol)) {
+    return undefined;
+  }
   let exchangeRate = null;
   let lp = day;
   let rp = day;
@@ -106,17 +109,17 @@ export const getMonthDetailing = async (year: number, month: number) => {
         const rate = getExchangeRate(exchangesMap, symbol, day._id);
         const convertedSum = convertSum(
           symbol,
-          rate.rate.toString(),
-          rate.inverted,
+          rate?.rate.toString() || '',
+          rate?.inverted || false,
           category.sum.toString(),
         );
         if (!transactions.sumUSD[day._id][category.category]) {
+          transactions.sumUSD[day._id][category.category] = convertedSum;
+        } else {
           transactions.sumUSD[day._id][category.category] = bigDecimal.add(
             transactions.sumUSD[day._id][category.category],
             convertedSum,
           );
-        } else {
-          transactions.sumUSD[day._id][category.category] = convertedSum;
         }
       });
     });
@@ -130,8 +133,8 @@ export const getMonthDetailing = async (year: number, month: number) => {
     const lastExchangeRate = rates[rates.length - 1];
     const convertedSum = convertSum(
       symbol,
-      lastExchangeRate.rate.toString(),
-      lastExchangeRate.inverted,
+      lastExchangeRate?.rate.toString(),
+      lastExchangeRate?.inverted,
       sum,
     );
     return bigDecimal.add(carry, convertedSum);
@@ -163,7 +166,7 @@ export const getTotal = async (date: Date) => {
   }>);
   const totalUSD = sums.reduce((carry, s) => {
     const rate = ratesMap[s._id];
-    const convertedSum = convertSum(s._id, rate.rate.toString(), rate.inverted, s.sum.toString());
+    const convertedSum = convertSum(s._id, rate?.rate.toString(), rate?.inverted, s.sum.toString());
     return bigDecimal.add(carry, convertedSum);
   }, '0');
   const sumsMap = sums.reduce((carry, s) => {
