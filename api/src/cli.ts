@@ -1,46 +1,29 @@
-import * as fs from 'fs';
-import mongoose from 'mongoose';
-import { ExchangeRateUSD } from './models';
+import {
+  addTransactionCommand, getTotalCommand, importRatesCommand, importTransactionsCommand, printHelp,
+} from './cliCommands';
 
 require('dotenv').config();
 
-const printHelp = () => {
-  console.log('Usage: yarn importRates symbol filename');
+const COMMAND_MAP = {
+  importRates: importRatesCommand,
+  addTransaction: addTransactionCommand,
+  importTransactions: importTransactionsCommand,
+  getTotal: getTotalCommand,
 };
-const getArgs = () => {
-  if (process.argv.length < 4) {
+type Command = keyof typeof COMMAND_MAP;
+
+const getCommandHandler = (command: Command) => COMMAND_MAP[command];
+const getCommandFromArgs = () => {
+  if (process.argv.length < 3) {
     printHelp();
-    process.exit(0);
+    process.exit(1);
   }
-  const [, , symbol, filename] = process.argv;
-  return { symbol, filename };
-};
-const extractData = (filename: string) => {
-  const buffer = fs.readFileSync(filename);
-  const dataString = buffer.toString();
-  const rows = dataString.split('\n');
-  const grid = rows.map((row) => row.split(','));
-  const headers = grid[0];
-  const data = grid.slice(1).reduce((carry, row) => {
-    const item = row.reduce((subCarry, col, index) => {
-      subCarry[headers[index]] = col;
-      return subCarry;
-    }, {} as Record<string, string>);
-    carry.push(item);
-    return carry;
-  }, [] as Record<string, string>[]);
-  return data.filter((item) => item.Date !== 'null' && item.Close !== 'null');
+  return process.argv[2] as Command;
 };
 const run = async () => {
-  const { symbol, filename } = getArgs();
-  const data = extractData(filename);
-  const rates = data.map((item) => ({
-    date: new Date(item.Date),
-    symbol,
-    rate: item.Close,
-  }));
-  await mongoose.connect(`mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@localhost/scrooge`);
-  await ExchangeRateUSD.insertMany(rates);
+  const command = getCommandFromArgs();
+  const commandHandler = getCommandHandler(command);
+  await commandHandler();
   process.exit(0);
 };
 run();
