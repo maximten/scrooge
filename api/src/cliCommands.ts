@@ -6,7 +6,7 @@ import { getTotal } from './controllers';
 export const printHelp = () => {
   const help = `Usage: ts-node src/cli.ts COMMAND
 Commands: 
-importRates - importRates SYMBOL FILE
+importRates - importRates SYMBOL FILE [INVERTED]
 addTransaction - addTransaction DATE SYMBOL AMOUNT CATEGORY
 importTransactions - addTransaction FILE
 getTotal`;
@@ -17,8 +17,8 @@ const getArgsForImportRates = () => {
     printHelp();
     process.exit(0);
   }
-  const [, , , symbol, filename] = process.argv;
-  return { symbol, filename };
+  const [, , , symbol, filename, inverted = false] = process.argv;
+  return { symbol, filename, inverted };
 };
 const extractDataFromCsv = (filename: string) => {
   const buffer = fs.readFileSync(filename);
@@ -38,13 +38,14 @@ const extractDataFromCsv = (filename: string) => {
 };
 const filterDataForImportRates = (data: Record<string, string>[]) => data.filter((item) => item.Date !== 'null' && item.Close !== 'null');
 export const importRatesCommand = async () => {
-  const { symbol, filename } = getArgsForImportRates();
+  const { symbol, filename, inverted } = getArgsForImportRates();
   const data = extractDataFromCsv(filename);
   const filteredData = filterDataForImportRates(data);
   const rates = filteredData.map((item) => ({
     date: new Date(item.Date),
     symbol,
     rate: item.Close,
+    inverted,
   }));
   await mongoose.connect(`mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@localhost/scrooge`);
   await ExchangeRateUSD.insertMany(rates);

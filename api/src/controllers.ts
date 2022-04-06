@@ -22,7 +22,12 @@ type SymbolTransactions = {
   } []
 } [];
 
-type ExchangeRateMap = Record<string, Record<number, mongoose.Types.Decimal128>>;
+type ExchangeRateMap = Record<string, Record<number, {
+  symbol: string,
+  date: Date,
+  rate: mongoose.Types.Decimal128,
+  inverted: boolean
+}>>;
 
 const getExchangeRate = (exchangesMap: ExchangeRateMap, symbol: string, day: number) => {
   let exchangeRate = null;
@@ -36,6 +41,16 @@ const getExchangeRate = (exchangesMap: ExchangeRateMap, symbol: string, day: num
   return exchangeRate;
 };
 
+const convertSum = (symbol: string, rate: string, inverted: boolean, sum: string) => {
+  if (['USD', 'USDT'].includes(symbol)) {
+    return sum;
+  }
+  if (inverted) {
+    return bigDecimal.divide(sum, rate, 2);
+  }
+  return bigDecimal.multiply(sum, rate);
+};
+
 export const getMonthDetailing = async (year: number, month: number) => {
   const { start, end } = getStartEndOfMonth(year, month);
   const symbols = await Transaction.aggregate([
@@ -46,7 +61,8 @@ export const getMonthDetailing = async (year: number, month: number) => {
   const exchanges: {
     symbol: string,
     date: Date,
-    rate: mongoose.Types.Decimal128
+    rate: mongoose.Types.Decimal128,
+    inverted: boolean
   }[] = await ExchangeRateUSD.find({
     date: { $gte: start, $lt: end },
     symbol: symbolsStrings,
@@ -55,7 +71,7 @@ export const getMonthDetailing = async (year: number, month: number) => {
     if (!carry[item.symbol]) {
       carry[item.symbol] = {};
     }
-    carry[item.symbol][item.date.getDate()] = item.rate;
+    carry[item.symbol][item.date.getDate()] = item;
     return carry;
   }, {} as ExchangeRateMap);
   const transactions: Record<string, any> = {
@@ -88,7 +104,12 @@ export const getMonthDetailing = async (year: number, month: number) => {
       }
       day.detailing.forEach((category) => {
         const rate = getExchangeRate(exchangesMap, symbol, day._id);
-        const convertedSum = bigDecimal.divide(category.sum.toString(), rate.toString(), 2);
+        const convertedSum = convertSum(
+          symbol,
+          rate.rate.toString(),
+          rate.inverted,
+          category.sum.toString(),
+        );
         if (!transactions.sumUSD[day._id][category.category]) {
           transactions.sumUSD[day._id][category.category] = bigDecimal.add(
             transactions.sumUSD[day._id][category.category],
@@ -102,12 +123,17 @@ export const getMonthDetailing = async (year: number, month: number) => {
     transactions[symbol] = symbolTransactionsMap;
   }
   const totalSumUSD = Object.entries(total).reduce((carry, [symbol, sum]) => {
-    if (symbol === 'USD') {
+    if (['USD', 'USDT'].includes(symbol)) {
       return bigDecimal.add(carry, sum);
     }
     const rates = Object.values(exchangesMap[symbol]);
     const lastExchangeRate = rates[rates.length - 1];
-    const convertedSum = bigDecimal.divide(sum, lastExchangeRate, 2);
+    const convertedSum = convertSum(
+      symbol,
+      lastExchangeRate.rate.toString(),
+      lastExchangeRate.inverted,
+      sum,
+    );
     return bigDecimal.add(carry, convertedSum);
   }, '0');
   total.sumUSD = totalSumUSD;
@@ -121,19 +147,23 @@ export const getTotal = async (date: Date) => {
   ]);
   const rates: {
     _id: string,
-    rate: mongoose.Types.Decimal128
+    rate: mongoose.Types.Decimal128,
+    inverted: boolean
   }[] = await ExchangeRateUSD.aggregate([
     { $sort: { date: -1 } },
-    { $group: { _id: '$symbol', rate: { $first: '$rate' } } },
+    { $group: { _id: '$symbol', rate: { $first: '$rate' }, inverted: { $first: '$inverted' } } },
   ]);
   const ratesMap = rates.reduce((carry, r) => {
-    carry[r._id] = r.rate;
+    carry[r._id] = r;
     return carry;
-  }, {} as Record<string, mongoose.Types.Decimal128>);
+  }, {} as Record<string, {
+    _id: string,
+    rate: mongoose.Types.Decimal128,
+    inverted: boolean
+  }>);
   const totalUSD = sums.reduce((carry, s) => {
     const rate = ratesMap[s._id];
-    const convertedSum = s._id === 'USD' ? s.sum.toString()
-      : bigDecimal.divide(s.sum.toString(), rate.toString(), 2);
+    const convertedSum = convertSum(s._id, rate.rate.toString(), rate.inverted, s.sum.toString());
     return bigDecimal.add(carry, convertedSum);
   }, '0');
   const sumsMap = sums.reduce((carry, s) => {
