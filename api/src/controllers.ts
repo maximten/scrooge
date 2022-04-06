@@ -3,7 +3,7 @@ import bigDecimal from 'js-big-decimal';
 import { ExchangeRateUSD, Transaction } from './models';
 
 // eslint-disable-next-line no-return-await
-export const getMonthRange = async () => await Transaction.aggregate([
+export const getMonthRange = async () => Transaction.aggregate([
   { $group: { _id: { year: { $year: '$date' }, month: { $month: '$date' } } } },
 ]);
 
@@ -14,15 +14,15 @@ const getStartEndOfMonth = (year: number, month: number) => {
 };
 
 type SymbolTransactions = {
-    _id: number,
-        detailing: {
-        category: string,
-            symbol: string,
-                sum: mongoose.Types.Decimal128
-    } []
-} []
+  _id: number,
+  detailing: {
+    category: string,
+    symbol: string,
+    sum: mongoose.Types.Decimal128
+  } []
+} [];
 
-type ExchangeRateMap = Record<string, Record<number, mongoose.Types.Decimal128>>
+type ExchangeRateMap = Record<string, Record<number, mongoose.Types.Decimal128>>;
 
 const getExchangeRate = (exchangesMap: ExchangeRateMap, symbol: string, day: number) => {
   let exchangeRate = null;
@@ -44,13 +44,13 @@ export const getMonthDetailing = async (year: number, month: number) => {
   ]);
   const symbolsStrings = symbols.map((s) => s._id);
   const exchanges: {
-        symbol: string,
-        date: Date,
-        rate: mongoose.Types.Decimal128
-    }[] = await ExchangeRateUSD.find({
-      date: { $gte: start, $lt: end },
-      symbol: symbolsStrings,
-    });
+    symbol: string,
+    date: Date,
+    rate: mongoose.Types.Decimal128
+  }[] = await ExchangeRateUSD.find({
+    date: { $gte: start, $lt: end },
+    symbol: symbolsStrings,
+  });
   const exchangesMap = exchanges.reduce((carry, item) => {
     if (!carry[item.symbol]) {
       carry[item.symbol] = {};
@@ -120,12 +120,12 @@ export const getTotal = async (date: Date) => {
     { $group: { _id: '$symbol', sum: { $sum: '$amount' } } },
   ]);
   const rates: {
-        _id: string,
-        rate: mongoose.Types.Decimal128
-    }[] = await ExchangeRateUSD.aggregate([
-      { $sort: { date: -1 } },
-      { $group: { _id: '$symbol', rate: { $first: '$rate' } } },
-    ]);
+    _id: string,
+    rate: mongoose.Types.Decimal128
+  }[] = await ExchangeRateUSD.aggregate([
+    { $sort: { date: -1 } },
+    { $group: { _id: '$symbol', rate: { $first: '$rate' } } },
+  ]);
   const ratesMap = rates.reduce((carry, r) => {
     carry[r._id] = r.rate;
     return carry;
