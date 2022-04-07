@@ -19,7 +19,9 @@
     "importRates": "TZ='Etc/Zulu' ts-node src/cli.ts importRates",
     "addTransaction": "TZ='Etc/Zulu' ts-node src/cli.ts addTransaction",
     "importTransactions": "ts-node src/cli.ts importTransactions",
-    "getTotal": "TZ='Etc/Zulu' ts-node src/cli.ts getTotal"
+    "getTotal": "TZ='Etc/Zulu' ts-node src/cli.ts getTotal",
+    "getSymbols": "TZ='Etc/Zulu' ts-node src/cli.ts getSymbols",
+    "getCategories": "TZ='Etc/Zulu' ts-node src/cli.ts getCategories"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.13.0",

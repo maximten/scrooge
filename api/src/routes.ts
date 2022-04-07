@@ -2,7 +2,10 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import express from 'express';
 import mongoose from 'mongoose';
-import { getMonthDetailing, getMonthRange, getTotal } from './controllers';
+import {
+  getCategories,
+  getMonthDetailing, getMonthRange, getSymbols, getTotal,
+} from './controllers';
 
 export const initApp = async () => {
   const app = express();
@@ -30,6 +33,14 @@ export const initApp = async () => {
     const date = new Date();
     const total = await getTotal(date);
     res.send(total);
+  });
+  app.get('/symbols', async (req, res) => {
+    const symbols = await getSymbols();
+    res.send(symbols);
+  });
+  app.get('/categories', async (req, res) => {
+    const categories = await getCategories();
+    res.send(categories);
   });
   app.listen(8080, () => {
     console.log('listening on 8080');

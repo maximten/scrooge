@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import * as fs from 'fs';
 import { ExchangeRateUSD, Transaction } from './models';
-import { getTotal } from './controllers';
+import { getCategories, getSymbols, getTotal } from './controllers';
 
 export const printHelp = () => {
   const help = `Usage: ts-node src/cli.ts COMMAND
@@ -9,7 +9,9 @@ Commands:
 importRates - importRates SYMBOL FILE [INVERTED]
 addTransaction - addTransaction DATE SYMBOL AMOUNT CATEGORY
 importTransactions - addTransaction FILE
-getTotal`;
+getTotal
+getCategories
+getSymbols`;
   console.log(help);
 };
 const getArgsForImportRates = () => {
@@ -97,4 +99,14 @@ export const getTotalCommand = async () => {
   const date = new Date();
   const total = await getTotal(date);
   console.log(JSON.stringify(total));
+};
+export const getSymbolsCommand = async () => {
+  await mongoose.connect(`mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@localhost/scrooge`);
+  const symbols = await getSymbols();
+  console.log(JSON.stringify(symbols));
+};
+export const getCategoriesCommand = async () => {
+  await mongoose.connect(`mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@localhost/scrooge`);
+  const categories = await getCategories();
+  console.log(JSON.stringify(categories));
 };

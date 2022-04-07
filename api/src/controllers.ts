@@ -175,3 +175,19 @@ export const getTotal = async (date: Date) => {
   }, {} as Record<string, string>);
   return { sums: sumsMap, totalUSD };
 };
+
+export const getSymbols = async () => {
+  const symbols: { _id: string }[] = await Transaction.aggregate([
+    { $group: { _id: '$symbol' } },
+  ]);
+  const symbolsList = symbols.map((i) => i._id);
+  return symbolsList;
+};
+
+export const getCategories = async () => {
+  const categories: { _id: string }[] = await Transaction.aggregate([
+    { $group: { _id: '$category' } },
+  ]);
+  const categoriesList = categories.map((i) => i._id);
+  return categoriesList;
+};

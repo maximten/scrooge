@@ -1,5 +1,11 @@
 import {
-  addTransactionCommand, getTotalCommand, importRatesCommand, importTransactionsCommand, printHelp,
+  addTransactionCommand,
+  getCategoriesCommand,
+  getSymbolsCommand,
+  getTotalCommand,
+  importRatesCommand,
+  importTransactionsCommand,
+  printHelp,
 } from './cliCommands';
 
 require('dotenv').config();
@@ -9,6 +15,8 @@ const COMMAND_MAP = {
   addTransaction: addTransactionCommand,
   importTransactions: importTransactionsCommand,
   getTotal: getTotalCommand,
+  getSymbols: getSymbolsCommand,
+  getCategories: getCategoriesCommand,
 };
 type Command = keyof typeof COMMAND_MAP;
 
