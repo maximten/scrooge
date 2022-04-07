@@ -127,7 +127,18 @@ const HANDLERS: Record<string, (ctx: MyContext) => void | Promise<void>> = {
       amount: session.amount,
       category: session.category,
     };
-    console.log(transaction);
+    const res = await fetch(`${process.env.API_HOST}/transaction`, {
+      method: 'POST',
+      body: JSON.stringify(transaction),
+      headers: {
+        'Content-type': 'application/json',
+      },
+    });
+    if (res.status === 200) {
+      ctx.reply('Транзакция сохранена');
+    } else {
+      ctx.reply('Произошла ошибка');
+    }
   },
 };
 
