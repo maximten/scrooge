@@ -8,10 +8,10 @@ export interface ITransaction {
 }
 
 const transactionSchema = new mongoose.Schema<ITransaction>({
-  date: Date,
-  amount: mongoose.Types.Decimal128,
-  symbol: String,
-  category: String,
+  date: { type: Date, required: true },
+  amount: { type: mongoose.Types.Decimal128, required: true },
+  symbol: { type: String, required: true },
+  category: { type: String, required: true },
 });
 
 const exchangeRateUSDSchema = new mongoose.Schema({

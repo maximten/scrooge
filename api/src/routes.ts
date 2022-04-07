@@ -6,6 +6,7 @@ import {
   getCategories,
   getMonthDetailing, getMonthRange, getSymbols, getTotal,
 } from './controllers';
+import { Transaction } from './models';
 
 export const initApp = async () => {
   const app = express();
@@ -19,12 +20,12 @@ export const initApp = async () => {
   app.get('/month', async (req, res) => {
     const { year, month } = req.query;
     if (!year || !month) {
-      res.status(400).end();
+      res.sendStatus(400);
     }
     const yearNum = Number.parseInt(year as string, 10);
     const monthNum = Number.parseInt(month as string, 10);
     if (Number.isNaN(yearNum) || Number.isNaN(monthNum)) {
-      res.status(400).end();
+      res.sendStatus(400);
     }
     const detailing = await getMonthDetailing(yearNum, monthNum);
     res.send(detailing);
@@ -41,6 +42,22 @@ export const initApp = async () => {
   app.get('/categories', async (req, res) => {
     const categories = await getCategories();
     res.send(categories);
+  });
+  app.post('/transaction', async (req, res) => {
+    const { body } = req;
+    const transaction = new Transaction({
+      date: body.date,
+      symbol: body.symbol,
+      amount: body.amount,
+      category: body.category,
+    });
+    try {
+      await transaction.validate();
+      await transaction.save();
+      res.sendStatus(200);
+    } catch {
+      res.sendStatus(400);
+    }
   });
   app.listen(8080, () => {
     console.log('listening on 8080');
