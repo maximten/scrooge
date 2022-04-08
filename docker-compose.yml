@@ -1,17 +1,6 @@
 version: '3'
 
 services:
-  reverse-proxy:
-    image: traefik:v2.5
-    ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./traefik.yml:/etc/traefik/traefik.yml
-      - ./userfile:/etc/traefik/usersfile
-  
   api:
     image: scrooge-api
     volumes:
@@ -19,8 +8,9 @@ services:
     labels:
       - "traefik.http.routers.api.rule=Host(`${API_HOST_DEV}`)"
       - "traefik.docker.network=scrooge_v2_web"
-      - "traefik.http.middlewares.apiAuth.basicauth.usersfile=/etc/traefik/usersfile"
       - "traefik.http.routers.api.middlewares=apiAuth@docker"
+    networks:
+      - proxy
 
   app:
     image: scrooge-app
@@ -29,6 +19,8 @@ services:
     labels:
       - "traefik.http.routers.app.rule=Host(`${APP_HOST_DEV}`)"
       - "traefik.http.routers.app.middlewares=apiAuth@docker"
+    networks:
+      - proxy
 
   bot:
     image: scrooge-bot
@@ -44,6 +36,8 @@ services:
       - ./mongo:/data/db
     ports:
       - 27017:27017
+    networks:
+      - proxy
 
   mongo-express:
     image: mongo-express:0.54.0
@@ -53,3 +47,9 @@ services:
       ME_CONFIG_MONGODB_ADMINUSERNAME: "${MONGO_ROOT}"
       ME_CONFIG_MONGODB_ADMINPASSWORD: "${MONGO_ROOT_PASS}"
       ME_CONFIG_MONGODB_URL: "mongodb://${MONGO_ROOT}:${MONGO_ROOT_PASS}@mongo:27017/"
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    name: proxy

@@ -1,19 +1,6 @@
 version: '3'
 
 services:
-  reverse-proxy:
-    image: traefik:v2.5
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./traefik.prod.yml:/etc/traefik/traefik.yml
-      - ./userfile:/etc/traefik/usersfile
-    networks:
-      - web
-    restart: always
-  
   api:
     image: scrooge-api
     volumes:
@@ -24,7 +11,7 @@ services:
       - "traefik.http.middlewares.apiAuth.basicauth.usersfile=/etc/traefik/usersfile"
       - "traefik.http.routers.api.middlewares=apiAuth@docker"
     networks:
-      - web
+      - proxy
       - internal
     restart: always
 
@@ -36,15 +23,13 @@ services:
       - "traefik.http.routers.app.rule=Host(`${APP_HOST_PROD}`)"
       - "traefik.http.routers.app.middlewares=apiAuth@docker"
     networks:
-      - web
+      - proxy
     restart: always
 
   bot:
     image: scrooge-bot
     volumes:
       - ./bot/.env:/app/.env
-    networks:
-      - web
     restart: always
 
   mongo:
@@ -64,5 +49,5 @@ services:
 networks:
   internal:
     internal: true
-  web:
-    internal: false
+  proxy:
+    name: proxy
