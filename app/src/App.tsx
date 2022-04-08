@@ -26,7 +26,9 @@ function App() {
 
   const handleMonth = useCallback(async (e, year, month) => {
     e.preventDefault()
-    const res = await fetch(`${process.env.REACT_APP_API_HOST}/month?year=${year}&month=${month}`)
+    const res = await fetch(`${process.env.REACT_APP_API_HOST}/month?year=${year}&month=${month}`, {
+      credentials: "include"
+    })
     const data: DetailingResponse = await res.json()
     const categories: Record<string, string> = {}
     const days = Object.entries(data.transactions["sumUSD"]).reduce((carry, [day, dayCategories]) => {
@@ -46,8 +48,11 @@ function App() {
   }, [])
 
   useEffect(() => {
+    console.log("test")
     const fetchRange = async () => {
-      const res = await fetch(`${process.env.REACT_APP_API_HOST}/range`)
+      const res = await fetch(`${process.env.REACT_APP_API_HOST}/range`, {
+        credentials: "include"
+      })
       const data: {_id: {year: number, month: number}}[] = await res.json()
       const range: Range = {}
       data.forEach((month) => {
@@ -60,7 +65,9 @@ function App() {
       setRange(range)
     }
     const fetchTotal = async () => {
-      const res = await fetch(`${process.env.REACT_APP_API_HOST}/total`)
+      const res = await fetch(`${process.env.REACT_APP_API_HOST}/total`, {
+        credentials: "include"
+      })
       const data: TotalResponse = await res.json()
       setTotal(data)
     }

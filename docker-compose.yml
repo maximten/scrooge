@@ -10,6 +10,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./traefik.yml:/etc/traefik/traefik.yml
+      - ./userfile:/etc/traefik/usersfile
   
   api:
     image: scrooge-api
@@ -18,6 +19,8 @@ services:
     labels:
       - "traefik.http.routers.api.rule=Host(`api.scrooge.mightyramen.dev`)"
       - "traefik.docker.network=scrooge_v2_web"
+      - "traefik.http.middlewares.apiAuth.basicauth.usersfile=/etc/traefik/usersfile"
+      - "traefik.http.routers.api.middlewares=apiAuth@docker"
 
   app:
     image: scrooge-app
@@ -25,6 +28,7 @@ services:
       - ./app:/app
     labels:
       - "traefik.http.routers.app.rule=Host(`app.scrooge.mightyramen.dev`)"
+      - "traefik.http.routers.app.middlewares=apiAuth@docker"
 
   bot:
     image: scrooge-bot

@@ -11,7 +11,10 @@ import { connectToMongo } from './utils';
 export const initApp = async () => {
   const app = express();
   app.use(bodyParser.json());
-  app.use(cors());
+  app.use(cors({
+    origin: process.env.APP_HOST,
+    credentials: true
+  }));
   await connectToMongo();
   app.get('/range', async (req, res) => {
     const monthRange = await getMonthRange();
