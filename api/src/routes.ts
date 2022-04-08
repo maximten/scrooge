@@ -1,18 +1,18 @@
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import express from 'express';
-import mongoose from 'mongoose';
 import {
   getCategories,
   getMonthDetailing, getMonthRange, getSymbols, getTotal,
 } from './controllers';
 import { Transaction } from './models';
+import { connectToMongo } from './utils';
 
 export const initApp = async () => {
   const app = express();
   app.use(bodyParser.json());
   app.use(cors());
-  await mongoose.connect(`mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@localhost/scrooge`);
+  await connectToMongo();
   app.get('/range', async (req, res) => {
     const monthRange = await getMonthRange();
     res.send(monthRange);

@@ -2,3 +2,5 @@
 mongo
 node_modules
 dump
+dist
+userfile

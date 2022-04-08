@@ -15,13 +15,15 @@
     "typescript": "^4.6.3"
   },
   "scripts": {
-    "start": "TZ='Etc/Zulu' ts-node src/api.ts",
+    "dev": "TZ='Etc/Zulu' ts-node src/api.ts",
     "importRates": "TZ='Etc/Zulu' ts-node src/cli.ts importRates",
     "addTransaction": "TZ='Etc/Zulu' ts-node src/cli.ts addTransaction",
     "importTransactions": "ts-node src/cli.ts importTransactions",
     "getTotal": "TZ='Etc/Zulu' ts-node src/cli.ts getTotal",
     "getSymbols": "TZ='Etc/Zulu' ts-node src/cli.ts getSymbols",
-    "getCategories": "TZ='Etc/Zulu' ts-node src/cli.ts getCategories"
+    "getCategories": "TZ='Etc/Zulu' ts-node src/cli.ts getCategories",
+    "build": "tsc",
+    "start": "node dist/api.js"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.13.0",

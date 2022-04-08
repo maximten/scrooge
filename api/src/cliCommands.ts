@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 import * as fs from 'fs';
 import { ExchangeRateUSD, Transaction } from './models';
 import { getCategories, getSymbols, getTotal } from './controllers';
@@ -49,7 +48,6 @@ export const importRatesCommand = async () => {
     rate: item.Close,
     inverted,
   }));
-  await mongoose.connect(`mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@localhost/scrooge`);
   await ExchangeRateUSD.insertMany(rates);
 };
 
@@ -68,7 +66,6 @@ export const addTransactionCommand = async () => {
     date, symbol, amount, category,
   } = getArgsForAddTransactionCommand();
   const dateObj = new Date(date);
-  await mongoose.connect(`mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@localhost/scrooge`);
   const transaction = new Transaction({
     date: dateObj,
     amount,
@@ -91,22 +88,18 @@ const getArgsForImportTransactionsCommand = () => {
 export const importTransactionsCommand = async () => {
   const { filename } = getArgsForImportTransactionsCommand();
   const data = extractDataFromCsv(filename);
-  await mongoose.connect(`mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@localhost/scrooge`);
   await Transaction.insertMany(data);
 };
 export const getTotalCommand = async () => {
-  await mongoose.connect(`mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@localhost/scrooge`);
   const date = new Date();
   const total = await getTotal(date);
   console.log(JSON.stringify(total));
 };
 export const getSymbolsCommand = async () => {
-  await mongoose.connect(`mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@localhost/scrooge`);
   const symbols = await getSymbols();
   console.log(JSON.stringify(symbols));
 };
 export const getCategoriesCommand = async () => {
-  await mongoose.connect(`mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@localhost/scrooge`);
   const categories = await getCategories();
   console.log(JSON.stringify(categories));
 };

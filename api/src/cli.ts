@@ -7,6 +7,7 @@ import {
   importTransactionsCommand,
   printHelp,
 } from './cliCommands';
+import { connectToMongo } from './utils';
 
 require('dotenv').config();
 
@@ -31,6 +32,7 @@ const getCommandFromArgs = () => {
 const run = async () => {
   const command = getCommandFromArgs();
   const commandHandler = getCommandHandler(command);
+  await connectToMongo();
   await commandHandler();
   process.exit(0);
 };

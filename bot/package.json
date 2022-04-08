@@ -18,6 +18,7 @@
     "eslint-plugin-import": "^2.26.0"
   },
   "scripts": {
-    "start": "ts-node ./src/bot.ts"
+    "start": "ts-node ./src/bot.ts",
+    "build": "tsc"
   }
 }
