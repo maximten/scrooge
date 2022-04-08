@@ -1,2 +1,2 @@
 #!/bin/bash
-docker build Dockerfile.prod -t scrooge-bot 
+docker build . -f Dockerfile.prod -t scrooge-bot 
