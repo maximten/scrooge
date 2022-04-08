@@ -9,6 +9,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./traefik.prod.yml:/etc/traefik/traefik.yml
+      - ./userfile:/etc/traefik/usersfile
     networks:
       - web
     restart: always
@@ -18,8 +19,10 @@ services:
     volumes:
       - ./api/.env:/app/.env
     labels:
-      - "traefik.http.routers.api.rule=Host(`api.scrooge.mightyramen.dev`)"
+      - "traefik.http.routers.api.rule=Host(`${API_HOST_PROD}`)"
       - "traefik.docker.network=scrooge_v2_web"
+      - "traefik.http.middlewares.apiAuth.basicauth.usersfile=/etc/traefik/usersfile"
+      - "traefik.http.routers.api.middlewares=apiAuth@docker"
     networks:
       - web
       - internal
@@ -30,7 +33,8 @@ services:
     volumes:
       - ./app/.env:/app/.env
     labels:
-      - "traefik.http.routers.app.rule=Host(`app.scrooge.mightyramen.dev`)"
+      - "traefik.http.routers.app.rule=Host(`${APP_HOST_PROD}`)"
+      - "traefik.http.routers.app.middlewares=apiAuth@docker"
     networks:
       - web
     restart: always

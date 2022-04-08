@@ -1,8 +1,2 @@
 providers:
   docker: {}
-
-http:
-  middlewares:
-    api-auth:
-      basicAuth:
-        usersFile: "./usersfile"

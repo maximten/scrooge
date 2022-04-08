@@ -48,7 +48,6 @@ function App() {
   }, [])
 
   useEffect(() => {
-    console.log("test")
     const fetchRange = async () => {
       const res = await fetch(`${process.env.REACT_APP_API_HOST}/range`, {
         credentials: "include"
