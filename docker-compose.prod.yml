@@ -8,7 +8,6 @@ services:
     labels:
       - "traefik.http.routers.api.rule=Host(`${API_HOST_PROD}`)"
       - "traefik.docker.network=scrooge_v2_web"
-      - "traefik.http.middlewares.apiAuth.basicauth.usersfile=/etc/traefik/usersfile"
       - "traefik.http.routers.api.middlewares=apiAuth@docker"
     networks:
       - proxy
