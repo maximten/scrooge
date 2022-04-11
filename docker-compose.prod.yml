@@ -7,7 +7,7 @@ services:
       - ./api/.env:/app/.env
     labels:
       - "traefik.http.routers.api.rule=Host(`${API_HOST_PROD}`)"
-      - "traefik.docker.network=scrooge_v2_web"
+      - "traefik.docker.network=proxy"
       - "traefik.http.routers.api.middlewares=apiAuth@docker"
     networks:
       - proxy
