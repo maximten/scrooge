@@ -16,6 +16,10 @@ if (!process.env.API_HOST) {
   console.error('api host not configured');
 }
 
+if (!process.env.AUTHORIZED_USER) {
+  console.error('authorized user not configured');
+}
+
 interface SessionData {
   isFormTransactionSession: boolean,
   isDateSetting?: boolean,
@@ -145,6 +149,13 @@ const HANDLERS: Record<string, (ctx: MyContext) => void | Promise<void>> = {
 const init = async () => {
   const bot = new Telegraf<MyContext>(process.env.BOT_TOKEN as string);
   bot.use(session());
+  bot.on('text', async (ctx, next) => {
+    if (ctx.from.username !== process.env.AUTHORIZED_USER) {
+      ctx.reply('Ты не Максим, уходи');
+    } else {
+      await next();
+    }
+  });
   bot.on('text', async (ctx, next) => {
     const session = sessionGetter(ctx);
     if (session.isCustomDateSetting && !Object.values(COMMANDS).includes(ctx.message.text)) {
