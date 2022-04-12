@@ -1,7 +1,9 @@
 import {
   addTransactionCommand,
   getCategoriesCommand,
+  getDateExpensesCommand,
   getSymbolsCommand,
+  getTodayExpensesCommand,
   getTotalCommand,
   importRatesCommand,
   importTransactionsCommand,
@@ -18,6 +20,8 @@ const COMMAND_MAP = {
   getTotal: getTotalCommand,
   getSymbols: getSymbolsCommand,
   getCategories: getCategoriesCommand,
+  getTodayExpenses: getTodayExpensesCommand,
+  getDateExpenses: getDateExpensesCommand,
 };
 type Command = keyof typeof COMMAND_MAP;
 
@@ -32,7 +36,7 @@ const getCommandFromArgs = () => {
 const run = async () => {
   const command = getCommandFromArgs();
   const commandHandler = getCommandHandler(command);
-  await connectToMongo();
+  await connectToMongo(process.env.MONGO_HOST_CLI as string);
   await commandHandler();
   process.exit(0);
 };

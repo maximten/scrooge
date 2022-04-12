@@ -23,6 +23,8 @@
     "getTotal": "TZ='Etc/Zulu' ts-node src/cli.ts getTotal",
     "getSymbols": "TZ='Etc/Zulu' ts-node src/cli.ts getSymbols",
     "getCategories": "TZ='Etc/Zulu' ts-node src/cli.ts getCategories",
+    "getTodayExpenses": "TZ='Etc/Zulu' ts-node src/cli.ts getTodayExpenses",
+    "getDateExpenses": "TZ='Etc/Zulu' ts-node src/cli.ts getDateExpenses",
     "build": "tsc",
     "start": "node dist/api.js"
   },

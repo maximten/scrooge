@@ -1,6 +1,8 @@
 import * as fs from 'fs';
 import { ExchangeRateUSD, Transaction } from './models';
-import { getCategories, getSymbols, getTotal } from './controllers';
+import {
+  getCategories, getDayExpenses, getSymbols, getTotal,
+} from './controllers';
 
 export const printHelp = () => {
   const help = `Usage: ts-node src/cli.ts COMMAND
@@ -10,7 +12,9 @@ addTransaction - addTransaction DATE SYMBOL AMOUNT CATEGORY
 importTransactions - addTransaction FILE
 getTotal
 getCategories
-getSymbols`;
+getSymbols
+getTodayExpenses
+getDateExpenses - getDateExpenses YEAR MONTH DAY`;
   console.log(help);
 };
 const getArgsForImportRates = () => {
@@ -102,4 +106,29 @@ export const getSymbolsCommand = async () => {
 export const getCategoriesCommand = async () => {
   const categories = await getCategories();
   console.log(JSON.stringify(categories));
+};
+export const getTodayExpensesCommand = async () => {
+  const today = new Date();
+  const expenses = await getDayExpenses(today);
+  console.log(JSON.stringify(expenses));
+};
+
+const getArgsForGetDateExpensesCommand = () => {
+  if (process.argv.length < 6) {
+    printHelp();
+    process.exit(0);
+  }
+  const [, , , yearString, monthString, dayString] = process.argv;
+  const year = Number.parseInt(yearString, 10);
+  const month = Number.parseInt(monthString, 10);
+  const day = Number.parseInt(dayString, 10);
+  return {
+    year, month, day,
+  };
+};
+export const getDateExpensesCommand = async () => {
+  const { year, month, day } = getArgsForGetDateExpensesCommand();
+  const date = new Date(year, month - 1, day);
+  const expenses = await getDayExpenses(date);
+  console.log(JSON.stringify(expenses));
 };

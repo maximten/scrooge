@@ -13,6 +13,15 @@ const getStartEndOfMonth = (year: number, month: number) => {
   return { start, end };
 };
 
+const getDayRange = (date: Date) => {
+  const startDate = new Date(date);
+  startDate.setHours(0, 0, 0);
+  const endDate = new Date(date);
+  endDate.setHours(0, 0, 0);
+  endDate.setDate(endDate.getDate() + 1);
+  return [startDate, endDate];
+};
+
 type SymbolTransactions = {
   _id: number,
   detailing: {
@@ -190,4 +199,20 @@ export const getCategories = async () => {
   ]);
   const categoriesList = categories.map((i) => i._id);
   return categoriesList;
+};
+
+export const getDayExpenses = async (date: Date) => {
+  const [start, end] = getDayRange(date);
+  const result = await Transaction.find({
+    date: { $gte: start, $lt: end },
+    amount: { $lt: 0 },
+  }, {
+    _id: 0,
+    _v: 0,
+  });
+  const mappedResult = result.map((item) => ({
+    sum: `${item.amount.toString()} ${item.symbol}`,
+    category: item.category,
+  }));
+  return mappedResult;
 };
