@@ -2,6 +2,7 @@ FROM node:16
 WORKDIR /app
 COPY *.json ./
 COPY src ./src
+COPY .env ./.env
 RUN yarn
 RUN yarn build
 CMD ["node", "./dist/bot.js"]

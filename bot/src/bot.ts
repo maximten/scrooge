@@ -5,7 +5,6 @@ import {
   Context,
 } from 'telegraf';
 import fetch from 'node-fetch';
-import * as util from 'util';
 
 require('dotenv').config();
 

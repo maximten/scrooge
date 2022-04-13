@@ -24,6 +24,8 @@ services:
     image: scrooge-bot
     volumes:
       - ./bot:/app
+    networks:
+      - proxy
 
   mongo:
     image: mongo:5.0.5

@@ -29,6 +29,9 @@ services:
     image: scrooge-bot
     volumes:
       - ./bot/.env:/app/.env
+    networks:
+      - proxy
+      - internal
     restart: always
 
   mongo:
