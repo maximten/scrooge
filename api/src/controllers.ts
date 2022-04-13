@@ -211,7 +211,8 @@ export const getDayExpenses = async (date: Date) => {
     _v: 0,
   });
   const mappedResult = result.map((item) => ({
-    sum: `${item.amount.toString()} ${item.symbol}`,
+    amount: item.amount.toString(),
+    symbol: item.symbol,
     category: item.category,
   }));
   return mappedResult;

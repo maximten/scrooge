@@ -7,8 +7,7 @@ services:
       - ./api:/app
     labels:
       - "traefik.http.routers.api.rule=Host(`${API_HOST_DEV}`)"
-      - "traefik.docker.network=scrooge_v2_web"
-      - "traefik.http.routers.api.middlewares=apiAuth@docker"
+      - "traefik.docker.network=proxy"
     networks:
       - proxy
 
@@ -18,14 +17,13 @@ services:
       - ./app:/app
     labels:
       - "traefik.http.routers.app.rule=Host(`${APP_HOST_DEV}`)"
-      - "traefik.http.routers.app.middlewares=apiAuth@docker"
     networks:
       - proxy
 
-  bot:
-    image: scrooge-bot
-    volumes:
-      - ./bot:/app
+  # bot:
+  #   image: scrooge-bot
+  #   volumes:
+  #     - ./bot:/app
 
   mongo:
     image: mongo:5.0.5

@@ -5,6 +5,7 @@ import {
   Context,
 } from 'telegraf';
 import fetch from 'node-fetch';
+import * as util from 'util';
 
 require('dotenv').config();
 
@@ -32,11 +33,23 @@ interface SessionData {
   isCategorySetting?: boolean,
   category?: string,
   isShouldSaveSetting?: boolean
+  isExpensesDateSetting?: boolean
 }
 
 interface MyContext extends Context {
   session?: SessionData
 }
+
+type Expenses = {
+  amount: string,
+  symbol: string,
+  category: string
+}[];
+
+type ExpensesResponse = {
+  date: string,
+  expenses: Expenses
+};
 
 const sessionHandler = (ctx: MyContext, handler: (session: SessionData) => void) => {
   ctx.session ??= { isFormTransactionSession: false };
@@ -57,12 +70,28 @@ const printTransaction = ({
 Категория: ${category}
 `);
 
+const printExpenses = (date: Date, expenses: Expenses) => {
+  const expensesList = expenses.map((item) => {
+    const amountString = item.amount.padEnd(20);
+    const symbolString = item.symbol.padEnd(10);
+    const categoryString = item.category;
+    return `${amountString}${symbolString}${categoryString}`;
+  }).join('\n');
+  const dateString = date.toLocaleDateString('RU');
+  const start = '\`\`\`\n';
+  const header = `Расходы на ${dateString}:\n`;
+  const end = '\`\`\`\n';
+  return start + header + expensesList + end;
+};
+
 const COMMANDS = {
   start: '/start',
   addTransaction: 'Добавить транзакцию',
   today: 'Сегодня',
   yesterday: 'Вчера',
   customDate: 'Указать дату',
+  dayExpenses: 'Траты за день',
+  dateExpenses: 'Траты за дату',
 };
 
 const REPLIES = {
@@ -72,6 +101,7 @@ const REPLIES = {
   setSymbol: 'В чем?',
   setAmount: 'Сколько?',
   setCategory: 'В какой категории?',
+  setExpensesDate: 'Введи дату',
 };
 
 const HANDLERS: Record<string, (ctx: MyContext) => void | Promise<void>> = {
@@ -79,7 +109,11 @@ const HANDLERS: Record<string, (ctx: MyContext) => void | Promise<void>> = {
     sessionHandler(ctx, (session) => {
       session.isFormTransactionSession = false;
     });
-    ctx.reply(REPLIES.start, Markup.keyboard([COMMANDS.addTransaction]).oneTime());
+    ctx.reply(REPLIES.start, Markup.keyboard([
+      COMMANDS.addTransaction,
+      COMMANDS.dayExpenses,
+      COMMANDS.dateExpenses,
+    ]).oneTime());
   },
   afterDateSet: async (ctx) => {
     const res = await fetch(`${process.env.API_HOST}/symbols`);
@@ -191,6 +225,20 @@ const init = async () => {
       } else {
         await HANDLERS.start(ctx);
       }
+    } else if (session.isExpensesDateSetting
+      && !Object.values(COMMANDS).includes(ctx.message.text)) {
+      sessionHandler(ctx, (session) => {
+        session.isExpensesDateSetting = false;
+      });
+      const date = new Date(ctx.message.text);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      const res = await fetch(`${process.env.API_HOST}/date_expenses?year=${year}&month=${month}&day=${day}`);
+      const { date: dateString, expenses } = await res.json() as ExpensesResponse;
+      const resultDate = new Date(dateString);
+      const result = printExpenses(resultDate, expenses);
+      ctx.replyWithMarkdownV2(result);
     }
     await next();
   });
@@ -240,6 +288,19 @@ const init = async () => {
       });
       ctx.reply(REPLIES.setCustomDate);
     }
+  });
+  bot.hears(COMMANDS.dayExpenses, async (ctx) => {
+    const res = await fetch(`${process.env.API_HOST}/day_expenses`);
+    const { date: dateString, expenses } = await res.json() as ExpensesResponse;
+    const date = new Date(dateString);
+    const result = printExpenses(date, expenses);
+    ctx.replyWithMarkdownV2(result);
+  });
+  bot.hears(COMMANDS.dateExpenses, async (ctx) => {
+    sessionHandler(ctx, (session) => {
+      session.isExpensesDateSetting = true;
+    });
+    ctx.reply(REPLIES.setExpensesDate);
   });
   process.once('SIGINT', () => {
     bot.stop('SIGINT');

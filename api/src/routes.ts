@@ -66,7 +66,10 @@ export const initApp = async () => {
   app.get('/day_expenses', async (req, res) => {
     const today = new Date();
     const expenses = await getDayExpenses(today);
-    res.send(expenses);
+    res.send({
+      date: today,
+      expenses,
+    });
   });
   app.get('/date_expenses', async (req, res) => {
     const { year, month, day } = req.query;
@@ -79,9 +82,12 @@ export const initApp = async () => {
     if (Number.isNaN(yearNum) || Number.isNaN(monthNum) || Number.isNaN(dayNum)) {
       res.sendStatus(400);
     }
-    const date = new Date(yearNum, monthNum, dayNum);
+    const date = new Date(yearNum, monthNum - 1, dayNum);
     const expenses = await getDayExpenses(date);
-    res.send(expenses);
+    res.send({
+      date,
+      expenses,
+    });
   });
   app.listen(8080, () => {
     console.log('listening on 8080');
