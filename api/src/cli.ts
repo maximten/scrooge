@@ -5,6 +5,7 @@ import {
   getSymbolsCommand,
   getTodayExpensesCommand,
   getTotalCommand,
+  importRateCommand,
   importRatesCommand,
   importTransactionsCommand,
   printHelp,
@@ -22,6 +23,7 @@ const COMMAND_MAP = {
   getCategories: getCategoriesCommand,
   getTodayExpenses: getTodayExpensesCommand,
   getDateExpenses: getDateExpensesCommand,
+  importRate: importRateCommand,
 };
 type Command = keyof typeof COMMAND_MAP;
 

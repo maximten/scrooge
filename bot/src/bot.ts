@@ -34,6 +34,11 @@ type ExpensesResponse = {
   expenses: Expenses
 };
 
+type TotalResponse = {
+  sums: Record<string, string>,
+  totalUSD: string
+};
+
 const printTransaction = ({
   date, symbol, amount, category,
 }: { date: Date, symbol: string, amount: number, category: string }) => (`
@@ -71,6 +76,22 @@ const printExpenses = (date: Date, expenses: Expenses) => {
   return start + header + expensesList + end;
 };
 
+const printTotal = (total: TotalResponse) => {
+  const sumsEntries = Object.entries(total.sums);
+  sumsEntries.sort((a, b) => Number.parseFloat(b[1]) - Number.parseFloat(a[1]));
+  const sumsString = sumsEntries.map(([symbol, amount]) => {
+    const symbolString = symbol.padEnd(5);
+    const amountString = amount.padStart(10);
+    return `${symbolString} ${amountString}`;
+  }).join('\n');
+  const totalUSDString = total.totalUSD.padStart(10);
+  const start = '\`\`\`\n';
+  const header = 'Активы:\n';
+  const usdString = `USD   ${totalUSDString}\n`;
+  const end = '\`\`\`\n';
+  return `${start + header + sumsString}\nСумма:\n${usdString}${end}`;
+};
+
 const CALLBACK_BUTTONS = {
   addTransaction: ['➕ Добавить транзакцию', 'addTransaction'],
   showTodayExpenses: ['🕥 Расходы сегодня', 'showTodayExpenses'],
@@ -81,6 +102,7 @@ const CALLBACK_BUTTONS = {
   no: ['Нет ❌', 'no'],
   exit: ['Выйти 🏃', 'exit'],
   addTransactionFile: ['🗃 Добавить файл с транзакциями', 'addTransactionFile'],
+  showTotal: ['💰 Показать сумму', 'showSum'],
 };
 
 const TOKENS = {
@@ -136,6 +158,10 @@ const HANDLERS = {
       [Markup.button.callback(
         CALLBACK_BUTTONS.showDateExpenses[0],
         CALLBACK_BUTTONS.showDateExpenses[1],
+      )],
+      [Markup.button.callback(
+        CALLBACK_BUTTONS.showTotal[0],
+        CALLBACK_BUTTONS.showTotal[1],
       )],
     ]));
   },
@@ -204,7 +230,6 @@ setDateScene.on('text', async (ctx) => {
   }
   await ctx.reply(date.toLocaleDateString('RU'));
   ctx.session.date = date;
-  await ctx.answerCbQuery();
   ctx.scene.enter('setSymbolScene');
 });
 
@@ -225,6 +250,10 @@ setSymbolScene.on('callback_query', async (ctx) => {
   await ctx.answerCbQuery();
   const query = ctx.callbackQuery as { data: string };
   ctx.session.symbol = query.data;
+  ctx.scene.enter('setAmountScene');
+});
+setSymbolScene.on('text', async (ctx) => {
+  ctx.session.symbol = ctx.message.text;
   ctx.scene.enter('setAmountScene');
 });
 
@@ -462,6 +491,17 @@ const init = async () => {
   bot.action(CALLBACK_BUTTONS.addTransactionFile[1], async (ctx) => {
     await ctx.answerCbQuery();
     ctx.scene.enter('addTransactionFile');
+  });
+  bot.action(CALLBACK_BUTTONS.showTotal[1], async (ctx) => {
+    await ctx.answerCbQuery();
+    try {
+      const res = await fetch(`${process.env.API_HOST}/total`);
+      const total = await res.json() as TotalResponse;
+      const totalString = printTotal(total);
+      await ctx.replyWithMarkdownV2(totalString);
+    } catch (e) {
+      await ctx.reply(TOKENS.FETCH_ERROR);
+    }
   });
   process.once('SIGINT', () => {
     bot.stop('SIGINT');

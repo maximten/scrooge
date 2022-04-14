@@ -1,8 +1,7 @@
 import * as fs from 'fs';
 import { ExchangeRateUSD, Transaction } from './models';
-import {
-  getCategories, getDayExpenses, getSymbols, getTotal,
-} from './controllers';
+import { exchangesController, transactionController } from './controllers';
+import { extractDataFromCsv } from './utils';
 
 export const printHelp = () => {
   const help = `Usage: ts-node src/cli.ts COMMAND
@@ -14,7 +13,8 @@ getTotal
 getCategories
 getSymbols
 getTodayExpenses
-getDateExpenses - getDateExpenses YEAR MONTH DAY`;
+getDateExpenses - getDateExpenses YEAR MONTH DAY
+importRate - importRate SYMBOL`;
   console.log(help);
 };
 const getArgsForImportRates = () => {
@@ -25,26 +25,11 @@ const getArgsForImportRates = () => {
   const [, , , symbol, filename, inverted = false] = process.argv;
   return { symbol, filename, inverted };
 };
-const extractDataFromCsv = (filename: string) => {
-  const buffer = fs.readFileSync(filename);
-  const dataString = buffer.toString();
-  const rows = dataString.split('\n');
-  const grid = rows.map((row) => row.split(','));
-  const headers = grid[0];
-  const data = grid.slice(1).reduce((carry, row) => {
-    const item = row.reduce((subCarry, col, index) => {
-      subCarry[headers[index]] = col;
-      return subCarry;
-    }, {} as Record<string, string>);
-    carry.push(item);
-    return carry;
-  }, [] as Record<string, string>[]);
-  return data;
-};
 const filterDataForImportRates = (data: Record<string, string>[]) => data.filter((item) => item.Date !== 'null' && item.Close !== 'null');
 export const importRatesCommand = async () => {
   const { symbol, filename, inverted } = getArgsForImportRates();
-  const data = extractDataFromCsv(filename);
+  const dataString = fs.readFileSync(filename).toString();
+  const data = extractDataFromCsv(dataString);
   const filteredData = filterDataForImportRates(data);
   const rates = filteredData.map((item) => ({
     date: new Date(item.Date),
@@ -91,25 +76,26 @@ const getArgsForImportTransactionsCommand = () => {
 };
 export const importTransactionsCommand = async () => {
   const { filename } = getArgsForImportTransactionsCommand();
-  const data = extractDataFromCsv(filename);
+  const dataString = fs.readFileSync(filename).toString();
+  const data = extractDataFromCsv(dataString);
   await Transaction.insertMany(data);
 };
 export const getTotalCommand = async () => {
   const date = new Date();
-  const total = await getTotal(date);
+  const total = await transactionController.getTotal(date);
   console.log(JSON.stringify(total));
 };
 export const getSymbolsCommand = async () => {
-  const symbols = await getSymbols();
+  const symbols = await transactionController.getSymbols();
   console.log(JSON.stringify(symbols));
 };
 export const getCategoriesCommand = async () => {
-  const categories = await getCategories();
+  const categories = await transactionController.getCategories();
   console.log(JSON.stringify(categories));
 };
 export const getTodayExpensesCommand = async () => {
   const today = new Date();
-  const expenses = await getDayExpenses(today);
+  const expenses = await transactionController.getDayExpenses(today);
   console.log(JSON.stringify(expenses));
 };
 
@@ -129,6 +115,21 @@ const getArgsForGetDateExpensesCommand = () => {
 export const getDateExpensesCommand = async () => {
   const { year, month, day } = getArgsForGetDateExpensesCommand();
   const date = new Date(year, month - 1, day);
-  const expenses = await getDayExpenses(date);
+  const expenses = await transactionController.getDayExpenses(date);
   console.log(JSON.stringify(expenses));
+};
+
+const getArgsToImportRateCommand = () => {
+  if (process.argv.length < 4) {
+    printHelp();
+    process.exit(1);
+  }
+  const [, , , symbol] = process.argv;
+  return { symbol };
+};
+
+export const importRateCommand = async () => {
+  const { symbol } = getArgsToImportRateCommand();
+  await exchangesController.importRate(symbol);
+  console.log('ok');
 };

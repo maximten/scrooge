@@ -70,7 +70,7 @@ function App() {
       const data: TotalResponse = await res.json()
       setTotal(data)
     }
-    fetchRange()
+    // fetchRange()
     fetchTotal()
   }, [])
   return (
