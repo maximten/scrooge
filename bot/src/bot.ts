@@ -2,8 +2,10 @@ import {
   Markup,
   Telegraf,
   session,
+  Scenes,
   Context,
 } from 'telegraf';
+
 import fetch from 'node-fetch';
 
 require('dotenv').config();
@@ -20,25 +22,6 @@ if (!process.env.AUTHORIZED_USER) {
   console.error('authorized user not configured');
 }
 
-interface SessionData {
-  isFormTransactionSession: boolean,
-  isDateSetting?: boolean,
-  isCustomDateSetting?: boolean,
-  date?: Date,
-  isSymbolSetting?: boolean,
-  symbol?: string,
-  isAmountSetting?: boolean,
-  amount?: string,
-  isCategorySetting?: boolean,
-  category?: string,
-  isShouldSaveSetting?: boolean
-  isExpensesDateSetting?: boolean
-}
-
-interface MyContext extends Context {
-  session?: SessionData
-}
-
 type Expenses = {
   amount: string,
   symbol: string,
@@ -50,21 +33,10 @@ type ExpensesResponse = {
   expenses: Expenses
 };
 
-const sessionHandler = (ctx: MyContext, handler: (session: SessionData) => void) => {
-  ctx.session ??= { isFormTransactionSession: false };
-  handler(ctx.session);
-  console.log(JSON.stringify(ctx.session));
-};
-
-const sessionGetter = (ctx: MyContext) => {
-  ctx.session ??= { isFormTransactionSession: false };
-  return ctx.session;
-};
-
 const printTransaction = ({
   date, symbol, amount, category,
-}: { date?: string, symbol?: string, amount?: string, category?: string }) => (`
-Дата: ${date},
+}: { date: Date, symbol: string, amount: number, category: string }) => (`
+Дата: ${date.toLocaleDateString('RU')},
 Сумма: ${amount} ${symbol},
 Категория: ${category}
 `);
@@ -83,223 +55,283 @@ const printExpenses = (date: Date, expenses: Expenses) => {
   return start + header + expensesList + end;
 };
 
-const COMMANDS = {
-  start: '/start',
-  addTransaction: 'Добавить транзакцию',
-  today: 'Сегодня',
-  yesterday: 'Вчера',
-  customDate: 'Указать дату',
-  dayExpenses: 'Траты за день',
-  dateExpenses: 'Траты за дату',
+const CALLBACK_BUTTONS = {
+  addTransaction: ['➕ Добавить транзакцию', 'addTransaction'],
+  showTodayExpenses: ['🕥 Расходы сегодня', 'showTodayExpenses'],
+  showDateExpenses: ['📅 Расходы на число', 'showDateExpenses'],
+  today: ['Сегодня', 'today'],
+  yesterday: ['Вчера', 'yesterday'],
+  yes: ['Да ✅', 'yes'],
+  no: ['Нет ❌', 'no'],
 };
 
-const REPLIES = {
-  start: 'Действия',
-  setDate: 'Когда это было?',
-  setCustomDate: 'Напиши дату в формате YYYY-MM-DD',
-  setSymbol: 'В чем?',
-  setAmount: 'Сколько?',
-  setCategory: 'В какой категории?',
-  setExpensesDate: 'Введи дату',
+const TOKENS = {
+  GREETINS: 'Действия',
+  FETCH_ERROR: 'Ошибка получения данных',
+  DATE_ERROR: 'Неправильная дата',
+  WRONG_USER_ERROR: 'Не авторизовнный пользователь',
+  SET_DATE_REQUEST: 'Когда это было?',
+  REQUEST_SYMBOL: 'В чем это было?',
+  SET_AMOUNT_REQUEST: 'Сколько?',
+  AMOUNT_ERROR: 'Неправильная сумма',
+  CHOOSE_CATEGORY: 'Выбери категорию',
+  REQUEST_TRANSACTION_CONFIRMATION: 'Сохранить?',
+  TRANSACTION_SAVE_SUCCESS: 'Транзакция сохранена',
 };
 
-const HANDLERS: Record<string, (ctx: MyContext) => void | Promise<void>> = {
-  start: async (ctx) => {
-    sessionHandler(ctx, (session) => {
-      session.isFormTransactionSession = false;
-    });
-    ctx.reply(REPLIES.start, Markup.keyboard([
-      COMMANDS.addTransaction,
-      COMMANDS.dayExpenses,
-      COMMANDS.dateExpenses,
-    ]).oneTime());
+interface MySceneSession extends Scenes.SceneSessionData {
+}
+interface MySession extends Scenes.SceneSession<MySceneSession> {
+  date: Date,
+  symbol: string,
+  amount: number,
+  category: string
+}
+interface MyContext extends Context {
+  session: MySession,
+  scene: Scenes.SceneContextScene<MyContext, MySceneSession>
+}
+
+const HANDLERS = {
+  START: async (ctx: MyContext) => {
+    await ctx.reply(TOKENS.GREETINS, Markup.inlineKeyboard([
+      [Markup.button.callback(
+        CALLBACK_BUTTONS.addTransaction[0],
+        CALLBACK_BUTTONS.addTransaction[1],
+      )],
+      [Markup.button.callback(
+        CALLBACK_BUTTONS.showTodayExpenses[0],
+        CALLBACK_BUTTONS.showTodayExpenses[1],
+      )],
+      [Markup.button.callback(
+        CALLBACK_BUTTONS.showDateExpenses[0],
+        CALLBACK_BUTTONS.showDateExpenses[1],
+      )],
+    ]));
   },
-  afterDateSet: async (ctx) => {
+};
+
+const showDateScene = new Scenes.BaseScene<MyContext>('showDateScene');
+showDateScene.enter((ctx) => ctx.reply('Введите дату'));
+showDateScene.command('stop', async (ctx) => ctx.scene.leave());
+showDateScene.on('text', async (ctx) => {
+  const dateString = ctx.message.text;
+  const date = new Date(dateString);
+  if (date.toString() === 'Invalid Date') {
+    ctx.reply(TOKENS.DATE_ERROR);
+    return;
+  }
+  try {
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const res = await fetch(`${process.env.API_HOST}/date_expenses?year=${year}&month=${month}&day=${day}`);
+    const { date: dateString, expenses } = await res.json() as ExpensesResponse;
+    const resultDate = new Date(dateString);
+    const result = printExpenses(resultDate, expenses);
+    ctx.replyWithMarkdownV2(result);
+    ctx.scene.leave();
+  } catch (e) {
+    console.error(e);
+    console.error(e);
+    ctx.reply(TOKENS.FETCH_ERROR);
+  }
+});
+
+const setDateScene = new Scenes.BaseScene<MyContext>('setDateScene');
+setDateScene.enter((ctx) => ctx.reply(
+  TOKENS.SET_DATE_REQUEST,
+  Markup.inlineKeyboard([
+    Markup.button.callback(
+      CALLBACK_BUTTONS.today[0],
+      CALLBACK_BUTTONS.today[1],
+    ),
+    Markup.button.callback(
+      CALLBACK_BUTTONS.yesterday[0],
+      CALLBACK_BUTTONS.yesterday[1],
+    ),
+  ]),
+));
+setDateScene.action(CALLBACK_BUTTONS.today[1], async (ctx) => {
+  ctx.session.date = new Date();
+  await ctx.reply(ctx.session.date.toLocaleDateString('RU'));
+  await ctx.answerCbQuery();
+  ctx.scene.enter('setSymbolScene');
+});
+setDateScene.action(CALLBACK_BUTTONS.yesterday[1], async (ctx) => {
+  const yesterday = new Date();
+  await ctx.reply(yesterday.toLocaleDateString('RU'));
+  yesterday.setDate(yesterday.getDate() - 1);
+  ctx.session.date = yesterday;
+  await ctx.answerCbQuery();
+  ctx.scene.enter('setSymbolScene');
+});
+setDateScene.on('text', async (ctx) => {
+  const date = new Date(ctx.message.text);
+  if (date.toString() === 'Invalid Date') {
+    await ctx.reply(TOKENS.DATE_ERROR);
+    return;
+  }
+  await ctx.reply(date.toLocaleDateString('RU'));
+  ctx.session.date = date;
+  await ctx.answerCbQuery();
+  ctx.scene.enter('setSymbolScene');
+});
+
+const setSymbolScene = new Scenes.BaseScene<MyContext>('setSymbolScene');
+setSymbolScene.enter(async (ctx) => {
+  try {
     const res = await fetch(`${process.env.API_HOST}/symbols`);
     const symbols = await res.json() as string[];
-    sessionHandler(ctx, (session) => {
-      session.isSymbolSetting = true;
-    });
-    ctx.reply(REPLIES.setSymbol, Markup.keyboard(symbols).oneTime());
-  },
-  aftgerSymbolSet: async (ctx) => {
-    sessionHandler(ctx, (session) => {
-      session.isAmountSetting = true;
-    });
-    ctx.reply(REPLIES.setAmount);
-  },
-  afterAmountSet: async (ctx) => {
+    const buttons = symbols.map((s) => [Markup.button.callback(s, s)]);
+    await ctx.reply(TOKENS.REQUEST_SYMBOL, Markup.inlineKeyboard(buttons));
+  } catch (e) {
+    console.error(e);
+    ctx.reply(TOKENS.FETCH_ERROR);
+    ctx.scene.leave();
+  }
+});
+setSymbolScene.on('callback_query', async (ctx) => {
+  await ctx.answerCbQuery();
+  const query = ctx.callbackQuery as { data: string };
+  ctx.session.symbol = query.data;
+  ctx.scene.enter('setAmountScene');
+});
+
+const setAmountScene = new Scenes.BaseScene<MyContext>('setAmountScene');
+setAmountScene.enter((ctx) => ctx.reply(TOKENS.SET_AMOUNT_REQUEST));
+setAmountScene.on('text', async (ctx) => {
+  const amountString = ctx.message.text;
+  const amount = Number.parseFloat(amountString);
+  if (Number.isNaN(amount)) {
+    await ctx.reply(TOKENS.AMOUNT_ERROR);
+    return;
+  }
+  ctx.session.amount = amount;
+  await ctx.scene.enter('setCategoryScene');
+});
+
+const setCategoryScene = new Scenes.BaseScene<MyContext>('setCategoryScene');
+setCategoryScene.enter(async (ctx) => {
+  try {
     const res = await fetch(`${process.env.API_HOST}/categories`);
     const categories = await res.json() as string[];
-    sessionHandler(ctx, (session) => {
-      session.isCategorySetting = true;
-    });
-    ctx.reply(REPLIES.setCategory, Markup.keyboard(categories).oneTime());
-  },
-  afterCategorySet: async (ctx) => {
-    const session = sessionGetter(ctx);
-    if (!session.date || !session.symbol || !session.amount || !session.category) {
-      HANDLERS.start(ctx);
-    }
+    const buttons = categories.map((c) => Markup.button.callback(c, c));
+    const grid = buttons.reduce((carry, item, index) => {
+      if (index % 2 === 0) {
+        carry.push([item]);
+      } else {
+        carry[carry.length - 1].push(item);
+      }
+      return carry;
+    }, [] as typeof buttons[]);
+    await ctx.reply(TOKENS.CHOOSE_CATEGORY, Markup.inlineKeyboard(grid));
+  } catch (e) {
+    console.error(e);
+    ctx.reply(TOKENS.FETCH_ERROR);
+  }
+});
+setCategoryScene.on('callback_query', async (ctx) => {
+  await ctx.answerCbQuery();
+  const query = ctx.callbackQuery as { data: string };
+  ctx.session.category = query.data;
+  ctx.scene.enter('confirmTransactionScene');
+});
+
+const confirmTransactionScene = new Scenes.BaseScene<MyContext>('confirmTransactionScene');
+confirmTransactionScene.enter(async (ctx) => {
+  const transaction = {
+    date: ctx.session.date,
+    symbol: ctx.session.symbol,
+    amount: ctx.session.amount,
+    category: ctx.session.category,
+  };
+  const transactionString = printTransaction(transaction);
+  await ctx.reply(transactionString);
+  await ctx.reply(TOKENS.REQUEST_TRANSACTION_CONFIRMATION, Markup.inlineKeyboard([
+    Markup.button.callback(CALLBACK_BUTTONS.yes[0], CALLBACK_BUTTONS.yes[1]),
+    Markup.button.callback(CALLBACK_BUTTONS.no[0], CALLBACK_BUTTONS.no[1]),
+  ]));
+});
+confirmTransactionScene.on('callback_query', async (ctx) => {
+  await ctx.answerCbQuery();
+  const query = ctx.callbackQuery as { data: string };
+  if (query.data === CALLBACK_BUTTONS.yes[1]) {
     const transaction = {
-      date: session.date?.toString(),
-      symbol: session.symbol,
-      amount: session.amount,
-      category: session.category,
+      date: ctx.session.date,
+      symbol: ctx.session.symbol,
+      amount: ctx.session.amount,
+      category: ctx.session.category,
     };
-    const transactionString = printTransaction(transaction);
-    sessionHandler(ctx, (session) => {
-      session.isShouldSaveSetting = true;
-    });
-    ctx.reply(`${transactionString}Сохранить?`, Markup.keyboard(['Да', 'Нет']).oneTime());
-  },
-  saveTransaction: async (ctx) => {
-    const session = sessionGetter(ctx);
-    if (!session.date || !session.symbol || !session.amount || !session.category) {
-      HANDLERS.start(ctx);
+    try {
+      const res = await fetch(`${process.env.API_HOST}/transaction`, {
+        method: 'POST',
+        headers: {
+          'Content-type': 'application/json',
+        },
+        body: JSON.stringify(transaction),
+      });
+      if (res.status !== 200) {
+        ctx.reply(TOKENS.FETCH_ERROR);
+        return;
+      }
+      await ctx.reply(TOKENS.TRANSACTION_SAVE_SUCCESS);
+      ctx.scene.leave();
+    } catch (e) {
+      console.error(e);
+      await ctx.reply(TOKENS.FETCH_ERROR);
     }
-    const transaction = {
-      date: session.date?.toString(),
-      symbol: session.symbol,
-      amount: session.amount,
-      category: session.category,
-    };
-    const res = await fetch(`${process.env.API_HOST}/transaction`, {
-      method: 'POST',
-      body: JSON.stringify(transaction),
-      headers: {
-        'Content-type': 'application/json',
-      },
-    });
-    if (res.status === 200) {
-      ctx.reply('Транзакция сохранена');
-    } else {
-      ctx.reply('Произошла ошибка');
-    }
-  },
-};
+    await HANDLERS.START(ctx);
+  } else {
+    await ctx.scene.leave();
+    await HANDLERS.START(ctx);
+  }
+});
+
+const stage = new Scenes.Stage<MyContext>([
+  showDateScene,
+  setDateScene,
+  setSymbolScene,
+  setAmountScene,
+  setCategoryScene,
+  confirmTransactionScene,
+]);
 
 const init = async () => {
-  const bot = new Telegraf<MyContext>(process.env.BOT_TOKEN as string);
+  const bot = new Telegraf<MyContext>(
+    process.env.BOT_TOKEN as string,
+  );
   bot.use(session());
+  bot.use(stage.middleware());
   bot.on('text', async (ctx, next) => {
     if (ctx.from.username !== process.env.AUTHORIZED_USER) {
-      ctx.reply('Ты не Максим, уходи');
+      ctx.reply(TOKENS.WRONG_USER_ERROR);
     } else {
       await next();
     }
   });
-  bot.on('text', async (ctx, next) => {
-    const session = sessionGetter(ctx);
-    if (session.isCustomDateSetting && !Object.values(COMMANDS).includes(ctx.message.text)) {
-      sessionHandler(ctx, (session) => {
-        session.date = new Date(ctx.message.text);
-        session.isCustomDateSetting = false;
-      });
-      await HANDLERS.afterDateSet(ctx);
-    } else if (session.isSymbolSetting && !Object.values(COMMANDS).includes(ctx.message.text)) {
-      sessionHandler(ctx, (session) => {
-        session.symbol = ctx.message.text;
-        session.isSymbolSetting = false;
-      });
-      await HANDLERS.aftgerSymbolSet(ctx);
-    } else if (session.isAmountSetting && !Object.values(COMMANDS).includes(ctx.message.text)) {
-      sessionHandler(ctx, (session) => {
-        session.amount = ctx.message.text;
-        session.isAmountSetting = false;
-      });
-      await HANDLERS.afterAmountSet(ctx);
-    } else if (session.isCategorySetting && !Object.values(COMMANDS).includes(ctx.message.text)) {
-      sessionHandler(ctx, (session) => {
-        session.category = ctx.message.text;
-        session.isCategorySetting = false;
-      });
-      await HANDLERS.afterCategorySet(ctx);
-    } else if (session.isShouldSaveSetting && !Object.values(COMMANDS).includes(ctx.message.text)) {
-      sessionHandler(ctx, (session) => {
-        session.isShouldSaveSetting = false;
-      });
-      if (ctx.message.text === 'Да') {
-        await HANDLERS.saveTransaction(ctx);
-      } else {
-        await HANDLERS.start(ctx);
-      }
-    } else if (session.isExpensesDateSetting
-      && !Object.values(COMMANDS).includes(ctx.message.text)) {
-      sessionHandler(ctx, (session) => {
-        session.isExpensesDateSetting = false;
-      });
-      const date = new Date(ctx.message.text);
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1;
-      const day = date.getDate();
-      const res = await fetch(`${process.env.API_HOST}/date_expenses?year=${year}&month=${month}&day=${day}`);
+  bot.command('start', HANDLERS.START);
+  bot.action(CALLBACK_BUTTONS.addTransaction[1], async (ctx) => {
+    await ctx.answerCbQuery();
+    ctx.scene.enter('setDateScene');
+  });
+  bot.action(CALLBACK_BUTTONS.showDateExpenses[1], async (ctx) => {
+    await ctx.answerCbQuery();
+    ctx.scene.enter('showDateScene');
+  });
+  bot.action(CALLBACK_BUTTONS.showTodayExpenses[1], async (ctx) => {
+    await ctx.answerCbQuery();
+    try {
+      const res = await fetch(`${process.env.API_HOST}/day_expenses`);
       const { date: dateString, expenses } = await res.json() as ExpensesResponse;
       const resultDate = new Date(dateString);
       const result = printExpenses(resultDate, expenses);
       ctx.replyWithMarkdownV2(result);
+      ctx.scene.leave();
+    } catch (e) {
+      console.error(e);
+      ctx.reply(TOKENS.FETCH_ERROR);
     }
-    await next();
-  });
-  bot.command(COMMANDS.start, HANDLERS.start);
-  bot.hears(COMMANDS.addTransaction, (ctx) => {
-    sessionHandler(ctx, (session) => {
-      session.isFormTransactionSession = true;
-      session.isDateSetting = true;
-    });
-    ctx.reply(REPLIES.setDate, Markup.keyboard([
-      COMMANDS.today,
-      COMMANDS.yesterday,
-      COMMANDS.customDate,
-    ]));
-  });
-  bot.hears(COMMANDS.today, async (ctx) => {
-    const session = sessionGetter(ctx);
-    if (!session.isDateSetting) {
-      HANDLERS.start(ctx);
-    } else {
-      sessionHandler(ctx, (session) => {
-        session.date = new Date();
-      });
-      await HANDLERS.afterDateSet(ctx);
-    }
-  });
-  bot.hears(COMMANDS.yesterday, async (ctx) => {
-    const session = sessionGetter(ctx);
-    if (!session.isDateSetting) {
-      HANDLERS.start(ctx);
-    } else {
-      sessionHandler(ctx, (session) => {
-        const date = new Date();
-        date.setDate(date.getDate() - 1);
-        session.date = date;
-      });
-      await HANDLERS.afterDateSet(ctx);
-    }
-  });
-  bot.hears(COMMANDS.customDate, (ctx) => {
-    const session = sessionGetter(ctx);
-    if (!session.isDateSetting) {
-      HANDLERS.start(ctx);
-    } else {
-      sessionHandler(ctx, (session) => {
-        session.isCustomDateSetting = true;
-      });
-      ctx.reply(REPLIES.setCustomDate);
-    }
-  });
-  bot.hears(COMMANDS.dayExpenses, async (ctx) => {
-    const res = await fetch(`${process.env.API_HOST}/day_expenses`);
-    const { date: dateString, expenses } = await res.json() as ExpensesResponse;
-    const date = new Date(dateString);
-    const result = printExpenses(date, expenses);
-    ctx.replyWithMarkdownV2(result);
-  });
-  bot.hears(COMMANDS.dateExpenses, async (ctx) => {
-    sessionHandler(ctx, (session) => {
-      session.isExpensesDateSetting = true;
-    });
-    ctx.reply(REPLIES.setExpensesDate);
   });
   process.once('SIGINT', () => {
     bot.stop('SIGINT');

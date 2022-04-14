@@ -1,8 +1,8 @@
 FROM node:16
 WORKDIR /app
 COPY *.json ./
-COPY src ./src
 RUN yarn
+COPY src ./src
 CMD ["yarn", "start"]
 
 

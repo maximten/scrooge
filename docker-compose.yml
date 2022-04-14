@@ -10,6 +10,8 @@ services:
       - "traefik.docker.network=proxy"
     networks:
       - proxy
+    depends_on:
+      - mongo
 
   app:
     image: scrooge-app
@@ -19,6 +21,8 @@ services:
       - "traefik.http.routers.app.rule=Host(`${APP_HOST_DEV}`)"
     networks:
       - proxy
+    depends_on:
+      - api
 
   bot:
     image: scrooge-bot
@@ -26,6 +30,8 @@ services:
       - ./bot:/app
     networks:
       - proxy
+    depends_on:
+      - api
 
   mongo:
     image: mongo:5.0.5
@@ -49,6 +55,8 @@ services:
       ME_CONFIG_MONGODB_URL: "mongodb://${MONGO_ROOT}:${MONGO_ROOT_PASS}@mongo:27017/"
     networks:
       - proxy
+    depends_on:
+      - mongo
 
 networks:
   proxy:

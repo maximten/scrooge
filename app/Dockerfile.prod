@@ -1,10 +1,10 @@
 FROM node:16
 WORKDIR /app
 COPY *.json ./
+RUN yarn
 COPY src ./src
 COPY public ./public
 COPY .env ./.env
-RUN yarn
 RUN yarn build
 EXPOSE 3000
 CMD ["yarn", "serve"]
