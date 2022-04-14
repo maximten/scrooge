@@ -42,9 +42,11 @@ type TotalResponse = {
 const printTransaction = ({
   date, symbol, amount, category,
 }: { date: Date, symbol: string, amount: number, category: string }) => (`
+\`\`\`
 Дата: ${date.toLocaleDateString('RU')},
 Сумма: ${amount} ${symbol},
 Категория: ${category}
+\`\`\`
 `);
 
 const printTransactionList = (transactionList: {
@@ -54,9 +56,9 @@ const printTransactionList = (transactionList: {
     date, symbol, amount, category,
   }) => {
     const dateString = date.toLocaleDateString('RU');
-    const amountString = amount.toString().padStart(20);
+    const amountString = amount.toString().padEnd(10);
     const symbolString = symbol.padEnd(5);
-    const categoryString = category.padEnd(20);
+    const categoryString = category.padEnd(10);
     return `${dateString}: ${amountString} ${symbolString} ${categoryString}`;
   }).join('\n');
   return `Транзакции:\n${transactionListString}`;
@@ -64,8 +66,8 @@ const printTransactionList = (transactionList: {
 
 const printExpenses = (date: Date, expenses: Expenses) => {
   const expensesList = expenses.map((item) => {
-    const amountString = item.amount.padEnd(20);
-    const symbolString = item.symbol.padEnd(10);
+    const amountString = item.amount.padEnd(10);
+    const symbolString = item.symbol.padEnd(5);
     const categoryString = item.category;
     return `${amountString}${symbolString}${categoryString}`;
   }).join('\n');
@@ -306,7 +308,7 @@ confirmTransactionScene.enter(async (ctx) => {
     category: ctx.session.category,
   };
   const transactionString = printTransaction(transaction);
-  await ctx.reply(transactionString);
+  await ctx.replyWithMarkdownV2(transactionString);
   await ctx.reply(TOKENS.REQUEST_TRANSACTION_CONFIRMATION, Markup.inlineKeyboard([
     Markup.button.callback(CALLBACK_BUTTONS.yes[0], CALLBACK_BUTTONS.yes[1]),
     Markup.button.callback(CALLBACK_BUTTONS.no[0], CALLBACK_BUTTONS.no[1]),
