@@ -63,6 +63,15 @@ export const initApp = async () => {
       res.sendStatus(400);
     }
   });
+  app.post('/transactionList', async (req, res) => {
+    const { body } = req;
+    try {
+      Transaction.insertMany(body);
+      res.sendStatus(200);
+    } catch {
+      res.sendStatus(400);
+    }
+  });
   app.get('/day_expenses', async (req, res) => {
     const today = new Date();
     const expenses = await getDayExpenses(today);

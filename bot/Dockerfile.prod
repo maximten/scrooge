@@ -5,6 +5,7 @@ RUN yarn
 COPY src ./src
 COPY .env ./.env
 RUN yarn build
+COPY transactions.csv ./transactions.csv
 CMD ["node", "./dist/bot.js"]
 
 

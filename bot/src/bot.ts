@@ -5,6 +5,7 @@ import {
   Scenes,
   Context,
 } from 'telegraf';
+import * as fs from 'fs';
 
 import fetch from 'node-fetch';
 
@@ -41,6 +42,21 @@ const printTransaction = ({
 Категория: ${category}
 `);
 
+const printTransactionList = (transactionList: {
+  date: Date, symbol: string, amount: number, category: string
+}[]) => {
+  const transactionListString = transactionList.map(({
+    date, symbol, amount, category,
+  }) => {
+    const dateString = date.toLocaleDateString('RU');
+    const amountString = amount.toString().padStart(20);
+    const symbolString = symbol.padEnd(5);
+    const categoryString = category.padEnd(20);
+    return `${dateString}: ${amountString} ${symbolString} ${categoryString}`;
+  }).join('\n');
+  return `Транзакции:\n${transactionListString}`;
+};
+
 const printExpenses = (date: Date, expenses: Expenses) => {
   const expensesList = expenses.map((item) => {
     const amountString = item.amount.padEnd(20);
@@ -63,6 +79,8 @@ const CALLBACK_BUTTONS = {
   yesterday: ['Вчера', 'yesterday'],
   yes: ['Да ✅', 'yes'],
   no: ['Нет ❌', 'no'],
+  exit: ['Выйти 🏃', 'exit'],
+  addTransactionFile: ['🗃 Добавить файл с транзакциями', 'addTransactionFile'],
 };
 
 const TOKENS = {
@@ -77,6 +95,8 @@ const TOKENS = {
   CHOOSE_CATEGORY: 'Выбери категорию',
   REQUEST_TRANSACTION_CONFIRMATION: 'Сохранить?',
   TRANSACTION_SAVE_SUCCESS: 'Транзакция сохранена',
+  REQUEST_TRANSACTION_FILE: 'Скинь файл заполненный по примеру',
+  TRANSACTION_LIST_SAVE_SUCCESS: 'Транзакции сохранены',
 };
 
 interface MySceneSession extends Scenes.SceneSessionData {
@@ -85,7 +105,13 @@ interface MySession extends Scenes.SceneSession<MySceneSession> {
   date: Date,
   symbol: string,
   amount: number,
-  category: string
+  category: string,
+  transactionList: {
+    date: Date,
+    symbol: string,
+    amount: number,
+    category: string,
+  }[]
 }
 interface MyContext extends Context {
   session: MySession,
@@ -98,6 +124,10 @@ const HANDLERS = {
       [Markup.button.callback(
         CALLBACK_BUTTONS.addTransaction[0],
         CALLBACK_BUTTONS.addTransaction[1],
+      )],
+      [Markup.button.callback(
+        CALLBACK_BUTTONS.addTransactionFile[0],
+        CALLBACK_BUTTONS.addTransactionFile[1],
       )],
       [Markup.button.callback(
         CALLBACK_BUTTONS.showTodayExpenses[0],
@@ -288,6 +318,100 @@ confirmTransactionScene.on('callback_query', async (ctx) => {
   }
 });
 
+const extractDataFromCsv = (dataString: string) => {
+  const rows = dataString.split('\n');
+  const grid = rows.map((row) => row.split(','));
+  const headers = grid[0];
+  const data = grid.slice(1).reduce((carry, row) => {
+    const item = row.reduce((subCarry, col, index) => {
+      subCarry[headers[index]] = col;
+      return subCarry;
+    }, {} as Record<string, string>);
+    const isValid = headers.reduce((carry, key) => (carry && Boolean(item[key])), true);
+    if (isValid) {
+      carry.push(item);
+    }
+    return carry;
+  }, [] as Record<string, string>[]);
+  return data;
+};
+
+const addTransactionFile = new Scenes.BaseScene<MyContext>('addTransactionFile');
+addTransactionFile.enter(async (ctx) => {
+  await ctx.reply(TOKENS.REQUEST_TRANSACTION_FILE, Markup.inlineKeyboard([
+    Markup.button.callback(CALLBACK_BUTTONS.exit[0], CALLBACK_BUTTONS.exit[1]),
+  ]));
+  await ctx.replyWithDocument({
+    source: fs.readFileSync('/app/transactions.csv'),
+    filename: 'example.csv',
+  });
+});
+addTransactionFile.action(CALLBACK_BUTTONS.exit[1], (ctx) => ctx.scene.leave());
+addTransactionFile.on('document', async (ctx) => {
+  const { file_id: fileId } = ctx.message.document;
+  const url = await ctx.telegram.getFileLink(fileId);
+  const res = await fetch(url.href);
+  const csvData = await res.text();
+  const data = extractDataFromCsv(csvData);
+  const transactionList = data
+    .filter((item) => item.date
+    && item.symbol
+    && item.amount
+    && item.category)
+    .map((item) => ({
+      date: new Date(item.date),
+      symbol: item.symbol,
+      amount: Number.parseFloat(item.amount),
+      category: item.category,
+    })).filter((item) => (item.date.toString() !== 'Inlvalid Date' && !Number.isNaN(item.amount))) as {
+    date: Date,
+    symbol: string,
+    amount: number,
+    category: string,
+  }[];
+  ctx.session.transactionList = transactionList;
+  ctx.scene.enter('confirmTransactionFile');
+});
+
+const confirmTransactionFile = new Scenes.BaseScene<MyContext>('confirmTransactionFile');
+confirmTransactionFile.enter(async (ctx) => {
+  const { transactionList } = ctx.session;
+  const transactionListString = printTransactionList(transactionList);
+  await ctx.reply(transactionListString);
+  await ctx.reply(TOKENS.REQUEST_TRANSACTION_CONFIRMATION, Markup.inlineKeyboard([
+    Markup.button.callback(CALLBACK_BUTTONS.yes[0], CALLBACK_BUTTONS.yes[1]),
+    Markup.button.callback(CALLBACK_BUTTONS.no[0], CALLBACK_BUTTONS.no[1]),
+  ]));
+});
+confirmTransactionFile.on('callback_query', async (ctx) => {
+  await ctx.answerCbQuery();
+  const query = ctx.callbackQuery as { data: string };
+  if (query.data === CALLBACK_BUTTONS.yes[1]) {
+    const { transactionList } = ctx.session;
+    try {
+      const res = await fetch(`${process.env.API_HOST}/transactionList`, {
+        method: 'POST',
+        headers: {
+          'Content-type': 'application/json',
+        },
+        body: JSON.stringify(transactionList),
+      });
+      if (res.status !== 200) {
+        await ctx.reply(TOKENS.FETCH_ERROR);
+        return;
+      }
+      await ctx.reply(TOKENS.TRANSACTION_LIST_SAVE_SUCCESS);
+      await ctx.scene.leave();
+      await HANDLERS.START(ctx);
+    } catch (e) {
+      await ctx.reply(TOKENS.FETCH_ERROR);
+    }
+  } else {
+    await ctx.scene.leave();
+    await HANDLERS.START(ctx);
+  }
+});
+
 const stage = new Scenes.Stage<MyContext>([
   showDateScene,
   setDateScene,
@@ -295,6 +419,8 @@ const stage = new Scenes.Stage<MyContext>([
   setAmountScene,
   setCategoryScene,
   confirmTransactionScene,
+  addTransactionFile,
+  confirmTransactionFile,
 ]);
 
 const init = async () => {
@@ -332,6 +458,10 @@ const init = async () => {
       console.error(e);
       ctx.reply(TOKENS.FETCH_ERROR);
     }
+  });
+  bot.action(CALLBACK_BUTTONS.addTransactionFile[1], async (ctx) => {
+    await ctx.answerCbQuery();
+    ctx.scene.enter('addTransactionFile');
   });
   process.once('SIGINT', () => {
     bot.stop('SIGINT');
