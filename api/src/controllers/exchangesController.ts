@@ -61,11 +61,7 @@ export const exchangesController = {
     }
     console.log(`${rates.length} rates saved`);
   },
-  exchangeCategoriesBySymbol: async (
-    date: Date,
-    categoriesBySymbols: Record<string, Record<string, string>>,
-  ) => {
-    const symbols = Object.keys(categoriesBySymbols);
+  getRatesOfSymbolsByDate: async (date: Date, symbols: string[]) => {
     const rates: {
       _id: string,
       rate: mongoose.Types.Decimal128,
@@ -82,7 +78,15 @@ export const exchangesController = {
       rate: string,
       inverted: boolean
     }>);
-    const convertedCategoriesBySymbols = Object.entries(categoriesBySymbols)
+    return ratesMap;
+  },
+  exchangeMapBySymbol: async (
+    date: Date,
+    mapBySymbols: Record<string, Record<string, string>>,
+  ) => {
+    const symbols = Object.keys(mapBySymbols);
+    const ratesMap = await exchangesController.getRatesOfSymbolsByDate(date, symbols);
+    const convertedCategoriesBySymbols = Object.entries(mapBySymbols)
       .map(([symbol, categories]) => {
         const rate = ratesMap[symbol];
         const convertedCategories = Object.entries(categories)
@@ -102,5 +106,48 @@ export const exchangesController = {
         return carry;
       }, {} as Record<string, Record<string, string>>);
     return convertedCategoriesBySymbols;
+  },
+  exchagneMap: async (date: Date, map: Record<string, string>) => {
+    const symbols = Object.keys(map);
+    const ratesMap = await exchangesController.getRatesOfSymbolsByDate(date, symbols);
+    const convertedMap = Object.entries(map)
+      .map(([symbol, amount]) => {
+        const rate = ratesMap[symbol];
+        return {
+          symbol, amount: convertSum(symbol, rate.rate, rate.inverted, amount),
+        };
+      })
+      .reduce((carry, { symbol, amount }) => {
+        carry[symbol] = amount;
+        return carry;
+      }, {} as Record<string, string>);
+    return convertedMap;
+  },
+  exchangeListsBySymbol: async (date: Date, listsBySymbol: Record<string, {
+    category: string;
+    amount: string;
+  }[]>) => {
+    const symbols = Object.keys(listsBySymbol);
+    const ratesMap = await exchangesController.getRatesOfSymbolsByDate(date, symbols);
+    const convertedListsBySymbol = Object.entries(listsBySymbol)
+      .map(([symbol, list]) => {
+        const rate = ratesMap[symbol];
+        const convertedList = list.map(({ category, amount }) => ({
+          category,
+          amount: convertSum(symbol, rate.rate, rate.inverted, amount),
+        }));
+        return {
+          symbol,
+          list: convertedList,
+        };
+      })
+      .reduce((carry, { symbol, list }) => {
+        carry[symbol] = list;
+        return carry;
+      }, {} as Record<string, {
+        category: string,
+        amount: string
+      }[]>);
+    return convertedListsBySymbol;
   },
 };

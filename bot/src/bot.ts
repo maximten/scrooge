@@ -24,10 +24,12 @@ if (!process.env.AUTHORIZED_USER) {
 }
 
 type Expenses = {
-  amount: string,
-  symbol: string,
-  category: string
-}[];
+  expensesBySymbol: Record<string, { category: string, amount: string }[]>,
+  sumsBySymbol: Record<string, string>,
+  convertedExpensesBySymbol: Record<string, { category: string, amount: string }[]>,
+  convertedSumBySymbol: Record<string, string>,
+  totalSum: string,
+};
 
 type ExpensesResponse = {
   date: string,
@@ -70,18 +72,57 @@ const printTransactionList = (transactionList: {
   return `Транзакции:\n${transactionListString}`;
 };
 
+const printExpensesLists = (expenses: Record<string, {
+  category: string;
+  amount: string;
+}[]>) => `${Object.entries(expenses)
+  .map(([symbol, list]) => {
+    const symbolString = `${symbol}:\n`;
+    const listString = list.map(({ category, amount }) => {
+      const categoryString = category.padEnd(15);
+      const amountString = amount.padEnd(10);
+      return `${categoryString} ${amountString}`;
+    }).join('\n');
+    return symbolString + listString;
+  }).join('\n')}\n`;
+
+const printSumsMap = (map: Record<string, string>) => `${Object.entries(map)
+  .map(([symbol, amount]) => {
+    const symbolString = symbol.padEnd(5);
+    const amountString = amount.padEnd(10);
+    return `${symbolString} ${amountString}`;
+  }).join('\n')}\n`;
+
 const printExpenses = (date: Date, expenses: Expenses) => {
-  const expensesList = expenses.map((item) => {
-    const amountString = item.amount.padEnd(10);
-    const symbolString = item.symbol.padEnd(5);
-    const categoryString = item.category;
-    return `${amountString}${symbolString}${categoryString}`;
-  }).join('\n');
   const dateString = date.toLocaleDateString('RU');
-  const start = '\`\`\`\n';
-  const header = `Расходы на ${dateString}:\n`;
-  const end = '\`\`\`\n';
-  return start + header + expensesList + end;
+  const start = '```\n';
+  const expensesHeader = `Расходы на ${dateString}:\n`;
+  const expensesString = printExpensesLists(expenses.expensesBySymbol);
+  const sumsHeader = 'Суммы:\n';
+  const sumsString = printSumsMap(expenses.sumsBySymbol);
+  const convertedExpensesHeander = `Расходы на ${dateString} в $:\n`;
+  const convertedExpensesString = printExpensesLists(expenses.convertedExpensesBySymbol);
+  const convertedSumsHeader = 'Суммы в $:\n';
+  const convertedSumsString = printSumsMap(expenses.convertedSumBySymbol);
+  const totalSumHeader = 'Полная сумма в $:\n';
+  const end = '```';
+  const nl = '\n';
+  return start
+    + expensesHeader
+    + expensesString
+    + nl
+    + sumsHeader
+    + sumsString
+    + nl
+    + convertedExpensesHeander
+    + convertedExpensesString
+    + nl
+    + convertedSumsHeader
+    + convertedSumsString
+    + nl
+    + totalSumHeader
+    + expenses.totalSum
+    + end;
 };
 
 const printTotal = (total: TotalResponse) => {
@@ -100,7 +141,7 @@ const printTotal = (total: TotalResponse) => {
   return `${start + header + sumsString}\nСумма:\n${usdString}${end}`;
 };
 
-const printExpensesGroup = (expenses: Record<string, Record<string, string>>) => {
+const printExpensesMaps = (expenses: Record<string, Record<string, string>>) => {
   const expensesString = Object.entries(expenses).map(([symbol, categories]) => {
     const categoriesEntries = Object.entries(categories);
     categoriesEntries.sort((a, b) => Number.parseFloat(b[1]) - Number.parseFloat(a[1]));
@@ -121,8 +162,8 @@ const printExpensesBySymbols = (expenses: ExpensesBy30DaysResponse) => {
     convertedTransactionsBySymbol,
     totalSum,
   } = expenses;
-  const expensesString = printExpensesGroup(transactionsBySymbol);
-  const convertedExpensesString = printExpensesGroup(convertedTransactionsBySymbol);
+  const expensesString = printExpensesMaps(transactionsBySymbol);
+  const convertedExpensesString = printExpensesMaps(convertedTransactionsBySymbol);
   return `
 \`\`\`
 Расходы за 30 дней:

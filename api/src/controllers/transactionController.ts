@@ -24,19 +24,33 @@ export const transactionController = {
   },
   getDayExpenses: async (date: Date) => {
     const [start, end] = getDayRange(date);
-    const result = await Transaction.find({
+    const expenses = await Transaction.find({
       date: { $gte: start, $lt: end },
       amount: { $lt: 0 },
     }, {
       _id: 0,
       _v: 0,
     });
-    const mappedResult = result.map((item) => ({
-      amount: item.amount.toString(),
-      symbol: item.symbol,
-      category: item.category,
-    }));
-    return mappedResult;
+    const sumsBySymbol: Record<string, string> = {};
+    const expensesBySymbol = expenses.reduce((carry, item) => {
+      carry[item.symbol] ??= [];
+      sumsBySymbol[item.symbol] ??= '0';
+      carry[item.symbol].push({ category: item.category, amount: item.amount.toString() });
+      sumsBySymbol[item.symbol] = bigDecimal.add(sumsBySymbol[item.symbol], item.amount.toString());
+      return carry;
+    }, {} as Record<string, { category: string, amount: string }[]>);
+    const convertedSumBySymbol = await exchangesController.exchagneMap(date, sumsBySymbol);
+    const convertedExpensesBySymbol = await exchangesController
+      .exchangeListsBySymbol(date, expensesBySymbol);
+    const totalSum = Object.values(convertedSumBySymbol)
+      .reduce((carry, amount) => bigDecimal.add(carry, amount), '0');
+    return {
+      expensesBySymbol,
+      sumsBySymbol,
+      convertedSumBySymbol,
+      convertedExpensesBySymbol,
+      totalSum,
+    };
   },
   getTotal: async (date: Date) => {
     const sums: { _id: string, sum: mongoose.Types.Decimal128 }[] = await Transaction.aggregate([
@@ -101,7 +115,7 @@ export const transactionController = {
       );
     });
     const convertedTransactionsBySymbol = await exchangesController
-      .exchangeCategoriesBySymbol(date, transactionsBySymbol);
+      .exchangeMapBySymbol(date, transactionsBySymbol);
     const totalSum = Object.entries(convertedTransactionsBySymbol)
       .reduce((carry, [, categories]) => {
         carry = bigDecimal.add(carry, categories.sum);
