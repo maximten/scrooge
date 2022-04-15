@@ -79,6 +79,20 @@ const init = async () => {
       expenses,
     });
   });
+  app.get('/30_day_expenses', async (req, res) => {
+    const date = new Date();
+    const {
+      transactionsBySymbol,
+      convertedTransactionsBySymbol,
+      totalSum,
+    } = await transactionController
+      .get30DaysExpenses(date);
+    res.send({
+      transactionsBySymbol,
+      convertedTransactionsBySymbol,
+      totalSum,
+    });
+  });
   app.listen(8080, () => {
     console.log('listening on 8080');
   });

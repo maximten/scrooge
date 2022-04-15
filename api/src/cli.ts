@@ -1,5 +1,6 @@
 import {
   addTransactionCommand,
+  export30DaysExpensesCommand,
   getCategoriesCommand,
   getDateExpensesCommand,
   getSymbolsCommand,
@@ -24,6 +25,7 @@ const COMMAND_MAP = {
   getTodayExpenses: getTodayExpensesCommand,
   getDateExpenses: getDateExpensesCommand,
   importRate: importRateCommand,
+  export30DaysExpenses: export30DaysExpensesCommand,
 };
 type Command = keyof typeof COMMAND_MAP;
 

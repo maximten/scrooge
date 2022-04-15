@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
-import { extractDataFromCsv } from '../utils';
+import mongoose from 'mongoose';
+import { convertSum, extractDataFromCsv } from '../utils';
 import { ExchangeRateUSD } from '../models';
 
 const SYMBOL_MAP: Record<string, string> = {
@@ -59,5 +60,47 @@ export const exchangesController = {
       await ExchangeRateUSD.insertMany(rates);
     }
     console.log(`${rates.length} rates saved`);
+  },
+  exchangeCategoriesBySymbol: async (
+    date: Date,
+    categoriesBySymbols: Record<string, Record<string, string>>,
+  ) => {
+    const symbols = Object.keys(categoriesBySymbols);
+    const rates: {
+      _id: string,
+      rate: mongoose.Types.Decimal128,
+      inverted: boolean
+    }[] = await ExchangeRateUSD.aggregate([
+      { $match: { date: { $lte: date }, symbol: { $in: symbols } } },
+      { $sort: { date: -1 } },
+      { $group: { _id: '$symbol', rate: { $first: '$rate' }, inverted: { $first: '$inverted' } } },
+    ]);
+    const ratesMap = rates.reduce((carry, item) => {
+      carry[item._id] = { rate: item.rate.toString(), inverted: item.inverted };
+      return carry;
+    }, {} as Record<string, {
+      rate: string,
+      inverted: boolean
+    }>);
+    const convertedCategoriesBySymbols = Object.entries(categoriesBySymbols)
+      .map(([symbol, categories]) => {
+        const rate = ratesMap[symbol];
+        const convertedCategories = Object.entries(categories)
+          .map(([category, amount]) => ([
+            category,
+            convertSum(symbol, rate.rate, rate.inverted, amount),
+          ]))
+          .reduce((carry, [category, amount]) => {
+            carry[category] = amount;
+            return carry;
+          }, {} as Record<string, string>);
+        return [symbol, convertedCategories];
+      })
+      .reduce((carry, item) => {
+        const [symbol, categories] = item as [string, Record<string, string>];
+        carry[symbol] = categories;
+        return carry;
+      }, {} as Record<string, Record<string, string>>);
+    return convertedCategoriesBySymbols;
   },
 };

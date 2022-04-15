@@ -39,6 +39,12 @@ type TotalResponse = {
   totalUSD: string
 };
 
+type ExpensesBy30DaysResponse = {
+  transactionsBySymbol: Record<string, Record<string, string>>,
+  convertedTransactionsBySymbol: Record<string, Record<string, string>>,
+  totalSum: string
+};
+
 const printTransaction = ({
   date, symbol, amount, category,
 }: { date: Date, symbol: string, amount: number, category: string }) => (`
@@ -94,17 +100,53 @@ const printTotal = (total: TotalResponse) => {
   return `${start + header + sumsString}\nСумма:\n${usdString}${end}`;
 };
 
+const printExpensesGroup = (expenses: Record<string, Record<string, string>>) => {
+  const expensesString = Object.entries(expenses).map(([symbol, categories]) => {
+    const categoriesEntries = Object.entries(categories);
+    categoriesEntries.sort((a, b) => Number.parseFloat(b[1]) - Number.parseFloat(a[1]));
+    const categoriesString = categoriesEntries.map(([category, amount]) => {
+      const categoryString = category.padEnd(15);
+      const amountString = amount.padEnd(10);
+      return `${categoryString} ${amountString}`;
+    }).join('\n');
+    const symbolString = `${symbol}:\n${categoriesString}`;
+    return symbolString;
+  }).join('\n');
+  return expensesString;
+};
+
+const printExpensesBySymbols = (expenses: ExpensesBy30DaysResponse) => {
+  const {
+    transactionsBySymbol,
+    convertedTransactionsBySymbol,
+    totalSum,
+  } = expenses;
+  const expensesString = printExpensesGroup(transactionsBySymbol);
+  const convertedExpensesString = printExpensesGroup(convertedTransactionsBySymbol);
+  return `
+\`\`\`
+Расходы за 30 дней:
+${expensesString}
+Расходы за 30 дней в $:
+${convertedExpensesString}
+Сумма расходов за 30 дней в $:
+${totalSum}
+\`\`\`
+`;
+};
+
 const CALLBACK_BUTTONS = {
   addTransaction: ['➕ Добавить транзакцию', 'addTransaction'],
   showTodayExpenses: ['🕥 Расходы сегодня', 'showTodayExpenses'],
   showDateExpenses: ['📅 Расходы на число', 'showDateExpenses'],
+  show30DayExpenses: ['💸 Расходы за 30 дней', 'show30DayExpenses'],
+  addTransactionFile: ['🗃 Добавить файл с транзакциями', 'addTransactionFile'],
+  showTotal: ['💰 Показать сумму', 'showSum'],
   today: ['Сегодня', 'today'],
   yesterday: ['Вчера', 'yesterday'],
   yes: ['Да ✅', 'yes'],
   no: ['Нет ❌', 'no'],
   exit: ['Выйти 🏃', 'exit'],
-  addTransactionFile: ['🗃 Добавить файл с транзакциями', 'addTransactionFile'],
-  showTotal: ['💰 Показать сумму', 'showSum'],
 };
 
 const TOKENS = {
@@ -160,6 +202,10 @@ const HANDLERS = {
       [Markup.button.callback(
         CALLBACK_BUTTONS.showDateExpenses[0],
         CALLBACK_BUTTONS.showDateExpenses[1],
+      )],
+      [Markup.button.callback(
+        CALLBACK_BUTTONS.show30DayExpenses[0],
+        CALLBACK_BUTTONS.show30DayExpenses[1],
       )],
       [Markup.button.callback(
         CALLBACK_BUTTONS.showTotal[0],
@@ -501,6 +547,17 @@ const init = async () => {
       const total = await res.json() as TotalResponse;
       const totalString = printTotal(total);
       await ctx.replyWithMarkdownV2(totalString);
+    } catch (e) {
+      await ctx.reply(TOKENS.FETCH_ERROR);
+    }
+  });
+  bot.action(CALLBACK_BUTTONS.show30DayExpenses[1], async (ctx) => {
+    await ctx.answerCbQuery();
+    try {
+      const res = await fetch(`${process.env.API_HOST}/30_day_expenses`);
+      const expensesBy30Days = await res.json() as ExpensesBy30DaysResponse;
+      const expensesString = printExpensesBySymbols(expensesBy30Days);
+      await ctx.replyWithMarkdownV2(expensesString);
     } catch (e) {
       await ctx.reply(TOKENS.FETCH_ERROR);
     }

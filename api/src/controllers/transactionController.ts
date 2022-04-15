@@ -2,6 +2,7 @@ import bigDecimal from 'js-big-decimal';
 import mongoose from 'mongoose';
 import { ExchangeRateUSD, Transaction } from '../models';
 import { convertSum, getDayRange } from '../utils';
+import { exchangesController } from './exchangesController';
 
 export const transactionController = {
   getMonthRange: async () => Transaction.aggregate([
@@ -74,5 +75,42 @@ export const transactionController = {
       return carry;
     }, {} as Record<string, string>);
     return { sums: sumsMap, totalUSD: totalUSDrounded };
+  },
+  get30DaysExpenses: async (date: Date) => {
+    const startDate = new Date(date);
+    startDate.setDate(startDate.getDate() - 30);
+    const transactions: {
+      _id: { symbol: string, category: string },
+      sum: mongoose.Types.Decimal128
+    }[] = await Transaction.aggregate([
+      { $match: { date: { $gte: startDate, $lte: date }, amount: { $lte: 0 } } },
+      { $group: { _id: { symbol: '$symbol', category: '$category' }, sum: { $sum: '$amount' } } },
+    ]).exec();
+    const transactionsBySymbol: Record<string, Record<string, string>> = {};
+    transactions.forEach((item) => {
+      if (!transactionsBySymbol[item._id.symbol]) {
+        transactionsBySymbol[item._id.symbol] = {};
+      }
+      transactionsBySymbol[item._id.symbol][item._id.category] = item.sum.toString();
+      if (!transactionsBySymbol[item._id.symbol].sum) {
+        transactionsBySymbol[item._id.symbol].sum = '0';
+      }
+      transactionsBySymbol[item._id.symbol].sum = bigDecimal.add(
+        transactionsBySymbol[item._id.symbol].sum,
+        item.sum.toString(),
+      );
+    });
+    const convertedTransactionsBySymbol = await exchangesController
+      .exchangeCategoriesBySymbol(date, transactionsBySymbol);
+    const totalSum = Object.entries(convertedTransactionsBySymbol)
+      .reduce((carry, [, categories]) => {
+        carry = bigDecimal.add(carry, categories.sum);
+        return carry;
+      }, '0');
+    return {
+      transactionsBySymbol,
+      convertedTransactionsBySymbol,
+      totalSum,
+    };
   },
 };

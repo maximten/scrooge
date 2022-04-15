@@ -14,7 +14,8 @@ getCategories
 getSymbols
 getTodayExpenses
 getDateExpenses - getDateExpenses YEAR MONTH DAY
-importRate - importRate SYMBOL`;
+importRate - importRate SYMBOL
+export30DaysExpenses`;
   console.log(help);
 };
 const getArgsForImportRates = () => {
@@ -132,4 +133,17 @@ export const importRateCommand = async () => {
   const { symbol } = getArgsToImportRateCommand();
   await exchangesController.importRate(symbol);
   console.log('ok');
+};
+
+export const export30DaysExpensesCommand = async () => {
+  const date = new Date();
+  const {
+    transactionsBySymbol,
+    convertedTransactionsBySymbol,
+    totalSum,
+  } = await transactionController
+    .get30DaysExpenses(date);
+  console.log(JSON.stringify(transactionsBySymbol));
+  console.log(JSON.stringify(convertedTransactionsBySymbol));
+  console.log(JSON.stringify(totalSum));
 };
