@@ -10,14 +10,16 @@ export const transactionController = {
   ]),
   getSymbols: async () => {
     const symbols: { _id: string }[] = await Transaction.aggregate([
-      { $group: { _id: '$symbol' } },
+      { $group: { _id: '$symbol', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
     ]);
     const symbolsList = symbols.map((i) => i._id);
     return symbolsList;
   },
   getCategories: async () => {
     const categories: { _id: string }[] = await Transaction.aggregate([
-      { $group: { _id: '$category' } },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
     ]);
     const categoriesList = categories.map((i) => i._id);
     return categoriesList;
