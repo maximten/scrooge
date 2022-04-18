@@ -1,7 +1,9 @@
 import bigDecimal from 'js-big-decimal';
 import mongoose from 'mongoose';
 import { ExchangeRateUSD, Transaction } from '../models';
-import { convertSum, getDayRange } from '../utils';
+import {
+  convertSum, getDayRange, getMonthDays, getWeekDays,
+} from '../utils';
 import { exchangesController } from './exchangesController';
 
 export const transactionController = {
@@ -92,14 +94,12 @@ export const transactionController = {
     }, {} as Record<string, string>);
     return { sums: sumsMap, totalUSD: totalUSDrounded };
   },
-  get30DaysExpenses: async (date: Date) => {
-    const startDate = new Date(date);
-    startDate.setDate(startDate.getDate() - 30);
+  getExpensesOnDateRangeGroupedByCategory: async (startDate: Date, endDate: Date) => {
     const transactions: {
       _id: { symbol: string, category: string },
       sum: mongoose.Types.Decimal128
     }[] = await Transaction.aggregate([
-      { $match: { date: { $gte: startDate, $lte: date }, amount: { $lte: 0 } } },
+      { $match: { date: { $gte: startDate, $lte: endDate }, amount: { $lte: 0 } } },
       { $group: { _id: { symbol: '$symbol', category: '$category' }, sum: { $sum: '$amount' } } },
     ]).exec();
     const transactionsBySymbol: Record<string, Record<string, string>> = {};
@@ -117,7 +117,7 @@ export const transactionController = {
       );
     });
     const convertedTransactionsBySymbol = await exchangesController
-      .exchangeMapBySymbol(date, transactionsBySymbol);
+      .exchangeMapBySymbol(endDate, transactionsBySymbol);
     const totalSum = Object.entries(convertedTransactionsBySymbol)
       .reduce((carry, [, categories]) => {
         carry = bigDecimal.add(carry, categories.sum);
@@ -128,5 +128,89 @@ export const transactionController = {
       convertedTransactionsBySymbol,
       totalSum,
     };
+  },
+  getExpensesOnDateRangeGroupedByDay: async (startDate: Date, endDate: Date) => {
+    const transactions: {
+      _id: { symbol: string, day: string },
+      sum: mongoose.Types.Decimal128
+    }[] = await Transaction.aggregate([
+      { $match: { date: { $gte: startDate, $lte: endDate }, amount: { $lte: 0 } } },
+      { $group: { _id: { symbol: '$symbol', day: { $dayOfMonth: '$date' } }, sum: { $sum: '$amount' } } },
+    ]).exec();
+    const transactionsBySymbol: Record<string, Record<string, string>> = {};
+    transactions.forEach((item) => {
+      if (!transactionsBySymbol[item._id.symbol]) {
+        transactionsBySymbol[item._id.symbol] = {};
+      }
+      const date = new Date(startDate);
+      date.setDate(Number.parseInt(item._id.day, 10));
+      const dateString = date.toLocaleDateString('RU');
+      transactionsBySymbol[item._id.symbol][dateString] = item.sum.toString();
+      if (!transactionsBySymbol[item._id.symbol].sum) {
+        transactionsBySymbol[item._id.symbol].sum = '0';
+      }
+      transactionsBySymbol[item._id.symbol].sum = bigDecimal.add(
+        transactionsBySymbol[item._id.symbol].sum,
+        item.sum.toString(),
+      );
+    });
+    const convertedTransactionsBySymbol = await exchangesController
+      .exchangeMapBySymbol(endDate, transactionsBySymbol);
+    const totalSum = Object.entries(convertedTransactionsBySymbol)
+      .reduce((carry, [, categories]) => {
+        carry = bigDecimal.add(carry, categories.sum);
+        return carry;
+      }, '0');
+    return {
+      transactionsBySymbol,
+      convertedTransactionsBySymbol,
+      totalSum,
+    };
+  },
+  get30DaysExpensesGroupedByCategory: async (date: Date) => {
+    const startDate = new Date(date);
+    startDate.setDate(startDate.getDate() - 30);
+    const result = await transactionController
+      .getExpensesOnDateRangeGroupedByCategory(startDate, date);
+    return result;
+  },
+  get30DaysExpensesGroupedByDay: async (date: Date) => {
+    const startDate = new Date(date);
+    startDate.setDate(startDate.getDate() - 30);
+    const result = await transactionController
+      .getExpensesOnDateRangeGroupedByDay(startDate, date);
+    return result;
+  },
+  getWeekExpensesGroupedByCategory: async (date: Date) => {
+    const days = getWeekDays(date);
+    const endDate = days[0];
+    const startDate = days[days.length - 1];
+    const result = await transactionController
+      .getExpensesOnDateRangeGroupedByCategory(startDate, endDate);
+    return result;
+  },
+  getWeekExpensesGroupedByDay: async (date: Date) => {
+    const days = getWeekDays(date);
+    const endDate = days[0];
+    const startDate = days[days.length - 1];
+    const result = await transactionController
+      .getExpensesOnDateRangeGroupedByDay(startDate, endDate);
+    return result;
+  },
+  getMonthExpensesGroupedByCategory: async (date: Date) => {
+    const days = getMonthDays(date);
+    const endDate = days[0];
+    const startDate = days[days.length - 1];
+    const result = await transactionController
+      .getExpensesOnDateRangeGroupedByCategory(startDate, endDate);
+    return result;
+  },
+  getMonthExpensesGroupedByDay: async (date: Date) => {
+    const days = getMonthDays(date);
+    const endDate = days[0];
+    const startDate = days[days.length - 1];
+    const result = await transactionController
+      .getExpensesOnDateRangeGroupedByDay(startDate, endDate);
+    return result;
   },
 };

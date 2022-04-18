@@ -51,3 +51,31 @@ export const extractDataFromCsv = (dataString: string) => {
   }, [] as Record<string, string>[]);
   return data;
 };
+
+export const getWeekDays = (date: Date) => {
+  const days = [];
+  let currentDate = new Date(date);
+  if (currentDate.getDay() === 0) {
+    days.push(currentDate);
+    currentDate = new Date(currentDate);
+    currentDate.setDate(currentDate.getDate() - 1);
+  }
+  while (currentDate.getDay() >= 1) {
+    days.push(currentDate);
+    currentDate = new Date(currentDate);
+    currentDate.setDate(currentDate.getDate() - 1);
+  }
+  return days;
+};
+
+export const getMonthDays = (date: Date) => {
+  const month = date.getMonth();
+  const days = [];
+  let currentDate = new Date(date);
+  while (currentDate.getDate() >= 1 && currentDate.getMonth() === month) {
+    days.push(currentDate);
+    currentDate = new Date(currentDate);
+    currentDate.setDate(currentDate.getDate() - 1);
+  }
+  return days;
+};

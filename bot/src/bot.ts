@@ -31,7 +31,7 @@ type Expenses = {
   totalSum: string,
 };
 
-type ExpensesResponse = {
+type DateExpensesResponse = {
   date: string,
   expenses: Expenses
 };
@@ -41,7 +41,7 @@ type TotalResponse = {
   totalUSD: string
 };
 
-type ExpensesBy30DaysResponse = {
+type RangeExpensesResponse = {
   transactionsBySymbol: Record<string, Record<string, string>>,
   convertedTransactionsBySymbol: Record<string, Record<string, string>>,
   totalSum: string
@@ -141,10 +141,14 @@ const printTotal = (total: TotalResponse) => {
   return `${start + header + sumsString}\nСумма:\n${usdString}${end}`;
 };
 
-const printExpensesMaps = (expenses: Record<string, Record<string, string>>) => {
+const printExpensesMaps = (expenses: Record<string, Record<string, string>>, sortBy: 'key' | 'value') => {
   const expensesString = Object.entries(expenses).map(([symbol, categories]) => {
     const categoriesEntries = Object.entries(categories);
-    categoriesEntries.sort((a, b) => Number.parseFloat(b[1]) - Number.parseFloat(a[1]));
+    if (sortBy === 'value') {
+      categoriesEntries.sort((a, b) => Number.parseFloat(b[1]) - Number.parseFloat(a[1]));
+    } else {
+      categoriesEntries.sort((a, b) => Number.parseFloat(a[0]) - Number.parseFloat(b[0]));
+    }
     const categoriesString = categoriesEntries.map(([category, amount]) => {
       const categoryString = category.padEnd(15);
       const amountString = amount.padEnd(10);
@@ -156,31 +160,39 @@ const printExpensesMaps = (expenses: Record<string, Record<string, string>>) => 
   return expensesString;
 };
 
-const printExpensesBySymbols = (expenses: ExpensesBy30DaysResponse) => {
+const printExpensesBySymbols = (expenses: RangeExpensesResponse, sortBy: 'key' | 'value', responseHeader: string) => {
   const {
     transactionsBySymbol,
     convertedTransactionsBySymbol,
     totalSum,
   } = expenses;
-  const expensesString = printExpensesMaps(transactionsBySymbol);
-  const convertedExpensesString = printExpensesMaps(convertedTransactionsBySymbol);
+  const expensesString = printExpensesMaps(transactionsBySymbol, sortBy);
+  const convertedExpensesString = printExpensesMaps(convertedTransactionsBySymbol, sortBy);
   return `
 \`\`\`
-Расходы за 30 дней:
+${responseHeader}:
 ${expensesString}
-Расходы за 30 дней в $:
+${responseHeader} в $:
 ${convertedExpensesString}
-Сумма расходов за 30 дней в $:
+${responseHeader} в $:
 ${totalSum}
 \`\`\`
 `;
 };
 
+const printExpensesBySymbolsByCategories = (expenses: RangeExpensesResponse, responseHeader: string) => printExpensesBySymbols(expenses, 'value', responseHeader);
+const printExpensesBySymbolsByDays = (expenses: RangeExpensesResponse, responseHeader: string) => printExpensesBySymbols(expenses, 'key', responseHeader);
+
 const CALLBACK_BUTTONS = {
   addTransaction: ['➕ Добавить транзакцию', 'addTransaction'],
   showTodayExpenses: ['🕥 Расходы сегодня', 'showTodayExpenses'],
   showDateExpenses: ['📅 Расходы на число', 'showDateExpenses'],
-  show30DayExpenses: ['💸 Расходы за 30 дней', 'show30DayExpenses'],
+  show30DayExpensesByCategory: ['💸 Расходы за 30 дней по категориям', 'show30DayExpensesByCategory'],
+  show30DayExpensesByDay: ['💸 Расходы за 30 дней по дням', 'show30DayExpensesByDay'],
+  showWeekExpensesByCategory: ['7️⃣ Расходы за неделю по категориям', 'showWeekExpensesByCategory'],
+  showWeekExpensesByDay: ['7️⃣ Расходы за неделю по дням', 'showWeekExpensesByDay'],
+  showMonthExpensesByCategory: ['🌚 Расходы за месяц по категориям', 'showMonthExpensesByCategory'],
+  showMonthExpensesByDay: ['🌚 Расходы за месяц по дням', 'showMonthExpensesByDay'],
   addTransactionFile: ['🗃 Добавить файл с транзакциями', 'addTransactionFile'],
   showTotal: ['💰 Показать сумму', 'showSum'],
   today: ['Сегодня', 'today'],
@@ -245,14 +257,56 @@ const HANDLERS = {
         CALLBACK_BUTTONS.showDateExpenses[1],
       )],
       [Markup.button.callback(
-        CALLBACK_BUTTONS.show30DayExpenses[0],
-        CALLBACK_BUTTONS.show30DayExpenses[1],
+        CALLBACK_BUTTONS.show30DayExpensesByCategory[0],
+        CALLBACK_BUTTONS.show30DayExpensesByCategory[1],
+      )],
+      [Markup.button.callback(
+        CALLBACK_BUTTONS.show30DayExpensesByDay[0],
+        CALLBACK_BUTTONS.show30DayExpensesByDay[1],
+      )],
+      [Markup.button.callback(
+        CALLBACK_BUTTONS.showWeekExpensesByCategory[0],
+        CALLBACK_BUTTONS.showWeekExpensesByCategory[1],
+      )],
+      [Markup.button.callback(
+        CALLBACK_BUTTONS.showWeekExpensesByDay[0],
+        CALLBACK_BUTTONS.showWeekExpensesByDay[1],
+      )],
+      [Markup.button.callback(
+        CALLBACK_BUTTONS.showMonthExpensesByCategory[0],
+        CALLBACK_BUTTONS.showMonthExpensesByCategory[1],
+      )],
+      [Markup.button.callback(
+        CALLBACK_BUTTONS.showMonthExpensesByDay[0],
+        CALLBACK_BUTTONS.showMonthExpensesByDay[1],
       )],
       [Markup.button.callback(
         CALLBACK_BUTTONS.showTotal[0],
         CALLBACK_BUTTONS.showTotal[1],
       )],
     ]));
+  },
+  RANGE_EXPENSES_CATEGORIES: async (ctx: MyContext, apiPath: string, responseHeader: string) => {
+    await ctx.answerCbQuery();
+    try {
+      const res = await fetch(`${process.env.API_HOST}${apiPath}`);
+      const expenses = await res.json() as RangeExpensesResponse;
+      const expensesString = printExpensesBySymbolsByCategories(expenses, responseHeader);
+      await ctx.replyWithMarkdownV2(expensesString);
+    } catch (e) {
+      await ctx.reply(TOKENS.FETCH_ERROR);
+    }
+  },
+  RANGE_EXPENSES_DAYS: async (ctx: MyContext, apiPath: string, responseHeader: string) => {
+    await ctx.answerCbQuery();
+    try {
+      const res = await fetch(`${process.env.API_HOST}${apiPath}`);
+      const expenses = await res.json() as RangeExpensesResponse;
+      const expensesString = printExpensesBySymbolsByDays(expenses, responseHeader);
+      await ctx.replyWithMarkdownV2(expensesString);
+    } catch (e) {
+      await ctx.reply(TOKENS.FETCH_ERROR);
+    }
   },
 };
 
@@ -271,7 +325,7 @@ showDateScene.on('text', async (ctx) => {
     const month = date.getMonth() + 1;
     const day = date.getDate();
     const res = await fetch(`${process.env.API_HOST}/date_expenses?year=${year}&month=${month}&day=${day}`);
-    const { date: dateString, expenses } = await res.json() as ExpensesResponse;
+    const { date: dateString, expenses } = await res.json() as DateExpensesResponse;
     const resultDate = new Date(dateString);
     const result = printExpenses(resultDate, expenses);
     ctx.replyWithMarkdownV2(result);
@@ -567,7 +621,7 @@ const init = async () => {
     await ctx.answerCbQuery();
     try {
       const res = await fetch(`${process.env.API_HOST}/day_expenses`);
-      const { date: dateString, expenses } = await res.json() as ExpensesResponse;
+      const { date: dateString, expenses } = await res.json() as DateExpensesResponse;
       const resultDate = new Date(dateString);
       const result = printExpenses(resultDate, expenses);
       ctx.replyWithMarkdownV2(result);
@@ -592,16 +646,23 @@ const init = async () => {
       await ctx.reply(TOKENS.FETCH_ERROR);
     }
   });
-  bot.action(CALLBACK_BUTTONS.show30DayExpenses[1], async (ctx) => {
-    await ctx.answerCbQuery();
-    try {
-      const res = await fetch(`${process.env.API_HOST}/30_day_expenses`);
-      const expensesBy30Days = await res.json() as ExpensesBy30DaysResponse;
-      const expensesString = printExpensesBySymbols(expensesBy30Days);
-      await ctx.replyWithMarkdownV2(expensesString);
-    } catch (e) {
-      await ctx.reply(TOKENS.FETCH_ERROR);
-    }
+  bot.action(CALLBACK_BUTTONS.show30DayExpensesByCategory[1], async (ctx) => {
+    await HANDLERS.RANGE_EXPENSES_CATEGORIES(ctx, '/30_day_expenses_by_category', 'Расходы за 30 дней');
+  });
+  bot.action(CALLBACK_BUTTONS.show30DayExpensesByDay[1], async (ctx) => {
+    await HANDLERS.RANGE_EXPENSES_DAYS(ctx, '/30_day_expenses_by_day', 'Расходы за 30 дней');
+  });
+  bot.action(CALLBACK_BUTTONS.showWeekExpensesByCategory[1], async (ctx) => {
+    await HANDLERS.RANGE_EXPENSES_CATEGORIES(ctx, '/week_expenses_by_category', 'Расходы за неделю');
+  });
+  bot.action(CALLBACK_BUTTONS.showWeekExpensesByDay[1], async (ctx) => {
+    await HANDLERS.RANGE_EXPENSES_DAYS(ctx, '/week_expenses_by_day', 'Расходы за неделю');
+  });
+  bot.action(CALLBACK_BUTTONS.showMonthExpensesByCategory[1], async (ctx) => {
+    await HANDLERS.RANGE_EXPENSES_CATEGORIES(ctx, '/month_expenses_by_category', 'Расходы за месяц');
+  });
+  bot.action(CALLBACK_BUTTONS.showMonthExpensesByDay[1], async (ctx) => {
+    await HANDLERS.RANGE_EXPENSES_DAYS(ctx, '/month_expenses_by_day', 'Расходы за месяц');
   });
   process.once('SIGINT', () => {
     bot.stop('SIGINT');

@@ -15,8 +15,12 @@ getSymbols
 getTodayExpenses
 getDateExpenses - getDateExpenses YEAR MONTH DAY
 importRate - importRate SYMBOL
-export30DaysExpenses
-updateRates`;
+export30DaysExpensesGroupedByCategory
+updateRates
+getWeekExpensesGroupedByCategory
+getWeekExpensesGroupedByDay
+getMonthExpensesGroupedByCategory
+getMonthExpensesGroupedByDay`;
   console.log(help);
 };
 const getArgsForImportRates = () => {
@@ -136,14 +140,14 @@ export const importRateCommand = async () => {
   console.log('ok');
 };
 
-export const export30DaysExpensesCommand = async () => {
+export const export30DaysExpensesGroupedByCategoryCommand = async () => {
   const date = new Date();
   const {
     transactionsBySymbol,
     convertedTransactionsBySymbol,
     totalSum,
   } = await transactionController
-    .get30DaysExpenses(date);
+    .get30DaysExpensesGroupedByCategory(date);
   console.log(JSON.stringify(transactionsBySymbol));
   console.log(JSON.stringify(convertedTransactionsBySymbol));
   console.log(JSON.stringify(totalSum));
@@ -153,4 +157,29 @@ export const updateRatesCommand = async () => {
   const symbols = await transactionController.getSymbols();
   const symbolsPromise = symbols.map((s) => exchangesController.importRate(s));
   await Promise.all(symbolsPromise);
+};
+
+export const getWeekExpensesGroupedByCategoryCommand = async () => {
+  const date = new Date();
+  const expenses = await transactionController.getWeekExpensesGroupedByCategory(date);
+  console.log(JSON.stringify(expenses));
+};
+
+export const getWeekExpensesGroupedByDayCommand = async () => {
+  const date = new Date();
+  date.setDate(date.getDate() - 1);
+  const expenses = await transactionController.getWeekExpensesGroupedByDay(date);
+  console.log(JSON.stringify(expenses));
+};
+
+export const getMonthExpensesGroupedByCategoryCommand = async () => {
+  const date = new Date();
+  const expenses = await transactionController.getMonthExpensesGroupedByCategory(date);
+  console.log(JSON.stringify(expenses));
+};
+
+export const getMonthExpensesGroupedByDayCommand = async () => {
+  const date = new Date();
+  const expenses = await transactionController.getMonthExpensesGroupedByDay(date);
+  console.log(JSON.stringify(expenses));
 };

@@ -83,14 +83,84 @@ const init = async () => {
       expenses,
     });
   });
-  app.get('/30_day_expenses', async (req, res) => {
+  app.get('/30_day_expenses_by_category', async (req, res) => {
     const date = new Date();
     const {
       transactionsBySymbol,
       convertedTransactionsBySymbol,
       totalSum,
     } = await transactionController
-      .get30DaysExpenses(date);
+      .get30DaysExpensesGroupedByCategory(date);
+    res.send({
+      transactionsBySymbol,
+      convertedTransactionsBySymbol,
+      totalSum,
+    });
+  });
+  app.get('/30_day_expenses_by_day', async (req, res) => {
+    const date = new Date();
+    const {
+      transactionsBySymbol,
+      convertedTransactionsBySymbol,
+      totalSum,
+    } = await transactionController
+      .get30DaysExpensesGroupedByDay(date);
+    res.send({
+      transactionsBySymbol,
+      convertedTransactionsBySymbol,
+      totalSum,
+    });
+  });
+  app.get('/week_expenses_by_category', async (req, res) => {
+    const date = new Date();
+    const {
+      transactionsBySymbol,
+      convertedTransactionsBySymbol,
+      totalSum,
+    } = await transactionController
+      .getWeekExpensesGroupedByCategory(date);
+    res.send({
+      transactionsBySymbol,
+      convertedTransactionsBySymbol,
+      totalSum,
+    });
+  });
+  app.get('/week_expenses_by_day', async (req, res) => {
+    const date = new Date();
+    const {
+      transactionsBySymbol,
+      convertedTransactionsBySymbol,
+      totalSum,
+    } = await transactionController
+      .getWeekExpensesGroupedByDay(date);
+    res.send({
+      transactionsBySymbol,
+      convertedTransactionsBySymbol,
+      totalSum,
+    });
+  });
+  app.get('/month_expenses_by_category', async (req, res) => {
+    const date = new Date();
+    const {
+      transactionsBySymbol,
+      convertedTransactionsBySymbol,
+      totalSum,
+    } = await transactionController
+      .getMonthExpensesGroupedByCategory(date);
+    res.send({
+      transactionsBySymbol,
+      convertedTransactionsBySymbol,
+      totalSum,
+    });
+  });
+  app.get('/month_expenses_by_day', async (req, res) => {
+    const date = new Date();
+    const {
+      transactionsBySymbol,
+      convertedTransactionsBySymbol,
+      totalSum,
+    } = await transactionController
+      .getMonthExpensesGroupedByDay(date);
     res.send({
       transactionsBySymbol,
       convertedTransactionsBySymbol,

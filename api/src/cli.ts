@@ -1,11 +1,15 @@
 import {
   addTransactionCommand,
-  export30DaysExpensesCommand,
+  export30DaysExpensesGroupedByCategoryCommand,
   getCategoriesCommand,
   getDateExpensesCommand,
+  getMonthExpensesGroupedByCategoryCommand,
+  getMonthExpensesGroupedByDayCommand,
   getSymbolsCommand,
   getTodayExpensesCommand,
   getTotalCommand,
+  getWeekExpensesGroupedByCategoryCommand,
+  getWeekExpensesGroupedByDayCommand,
   importRateCommand,
   importRatesCommand,
   importTransactionsCommand,
@@ -26,8 +30,12 @@ const COMMAND_MAP = {
   getTodayExpenses: getTodayExpensesCommand,
   getDateExpenses: getDateExpensesCommand,
   importRate: importRateCommand,
-  export30DaysExpenses: export30DaysExpensesCommand,
+  export30DaysExpensesGroupedByCategory: export30DaysExpensesGroupedByCategoryCommand,
   updateRates: updateRatesCommand,
+  getWeekExpensesGroupedByCategory: getWeekExpensesGroupedByCategoryCommand,
+  getWeekExpensesGroupedByDay: getWeekExpensesGroupedByDayCommand,
+  getMonthExpensesGroupedByCategory: getMonthExpensesGroupedByCategoryCommand,
+  getMonthExpensesGroupedByDay: getMonthExpensesGroupedByDayCommand,
 };
 type Command = keyof typeof COMMAND_MAP;
 
