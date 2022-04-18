@@ -29,7 +29,8 @@
     "getTodayExpenses": "TZ='Etc/Zulu' ts-node src/cli.ts getTodayExpenses",
     "getDateExpenses": "TZ='Etc/Zulu' ts-node src/cli.ts getDateExpenses",
     "importRate": "TZ='Etc/Zulu' ts-node src/cli.ts importRate",
-    "export30DaysExpenses": "TZ='Etc/Zulu' ts-node src/cli.ts export30DaysExpenses"
+    "export30DaysExpenses": "TZ='Etc/Zulu' ts-node src/cli.ts export30DaysExpenses",
+    "updateRates": "TZ='Etc/Zulu' ts-node src/cli.ts updateRates"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.13.0",

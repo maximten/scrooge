@@ -10,6 +10,7 @@ import {
   importRatesCommand,
   importTransactionsCommand,
   printHelp,
+  updateRatesCommand,
 } from './cliCommands';
 import { connectToMongo } from './utils';
 
@@ -26,6 +27,7 @@ const COMMAND_MAP = {
   getDateExpenses: getDateExpensesCommand,
   importRate: importRateCommand,
   export30DaysExpenses: export30DaysExpensesCommand,
+  updateRates: updateRatesCommand,
 };
 type Command = keyof typeof COMMAND_MAP;
 

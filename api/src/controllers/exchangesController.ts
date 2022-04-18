@@ -59,7 +59,7 @@ export const exchangesController = {
     if (rates.length > 0) {
       await ExchangeRateUSD.insertMany(rates);
     }
-    console.log(`${rates.length} rates saved`);
+    console.log(`${rates.length} rates for ${symbol} saved`);
   },
   getRatesOfSymbolsByDate: async (date: Date, symbols: string[]) => {
     const rates: {
