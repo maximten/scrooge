@@ -34,6 +34,14 @@ services:
       - internal
     restart: always
 
+  cron:
+    image: scrooge-cron
+    networks:
+      - internal
+    depends_on:
+      - api
+    restart: always
+          
   mongo:
     image: mongo:5.0.5
     environment:

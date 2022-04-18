@@ -3,7 +3,7 @@ import cors from 'cors';
 import express from 'express';
 import { Transaction } from './models';
 import { connectToMongo } from './utils';
-import { transactionController } from './controllers';
+import { exchangesController, transactionController } from './controllers';
 
 require('dotenv').config();
 
@@ -15,6 +15,10 @@ const init = async () => {
     credentials: true,
   }));
   await connectToMongo(process.env.MONGO_HOST as string);
+  app.use((req, res, next) => {
+    console.log(req.path);
+    next();
+  });
   app.get('/total', async (req, res) => {
     const date = new Date();
     const total = await transactionController.getTotal(date);
@@ -92,6 +96,12 @@ const init = async () => {
       convertedTransactionsBySymbol,
       totalSum,
     });
+  });
+  app.get('/update_rates', async (req, res) => {
+    const symbols = await transactionController.getSymbols();
+    const symbolsPromise = symbols.map((s) => exchangesController.importRate(s));
+    await Promise.all(symbolsPromise);
+    res.send('ok');
   });
   app.listen(8080, () => {
     console.log('listening on 8080');
