@@ -131,19 +131,23 @@ export const transactionController = {
   },
   getExpensesOnDateRangeGroupedByDay: async (startDate: Date, endDate: Date) => {
     const transactions: {
-      _id: { symbol: string, day: string },
+      _id: { symbol: string, date: string },
       sum: mongoose.Types.Decimal128
     }[] = await Transaction.aggregate([
       { $match: { date: { $gte: startDate, $lte: endDate }, amount: { $lte: 0 } } },
-      { $group: { _id: { symbol: '$symbol', day: { $dayOfMonth: '$date' } }, sum: { $sum: '$amount' } } },
+      {
+        $group: {
+          _id: { symbol: '$symbol', date: '$date' },
+          sum: { $sum: '$amount' },
+        },
+      },
     ]).exec();
     const transactionsBySymbol: Record<string, Record<string, string>> = {};
     transactions.forEach((item) => {
       if (!transactionsBySymbol[item._id.symbol]) {
         transactionsBySymbol[item._id.symbol] = {};
       }
-      const date = new Date(startDate);
-      date.setDate(Number.parseInt(item._id.day, 10));
+      const date = new Date(item._id.date);
       const dateString = date.toLocaleDateString('RU');
       transactionsBySymbol[item._id.symbol][dateString] = item.sum.toString();
       if (!transactionsBySymbol[item._id.symbol].sum) {
