@@ -167,7 +167,6 @@ export const getWeekExpensesGroupedByCategoryCommand = async () => {
 
 export const getWeekExpensesGroupedByDayCommand = async () => {
   const date = new Date();
-  date.setDate(date.getDate() - 1);
   const expenses = await transactionController.getWeekExpensesGroupedByDay(date);
   console.log(JSON.stringify(expenses));
 };

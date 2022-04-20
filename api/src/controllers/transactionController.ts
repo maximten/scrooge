@@ -137,7 +137,15 @@ export const transactionController = {
       { $match: { date: { $gte: startDate, $lte: endDate }, amount: { $lte: 0 } } },
       {
         $group: {
-          _id: { symbol: '$symbol', date: '$date' },
+          _id: {
+            symbol: '$symbol',
+            date: {
+              $dateToString: {
+                format: '%Y-%m-%d',
+                date: '$date',
+              },
+            },
+          },
           sum: { $sum: '$amount' },
         },
       },
