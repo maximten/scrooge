@@ -1,4 +1,5 @@
 import { Expenses, TotalResponse, RangeExpensesResponse } from './types';
+import { parseDate } from './utils';
 
 export const printTransaction = ({
   date, symbol, amount, category,
@@ -100,7 +101,17 @@ export const printExpensesMaps = (expenses: Record<string, Record<string, string
     if (sortBy === 'value') {
       categoriesEntries.sort((a, b) => Number.parseFloat(b[1]) - Number.parseFloat(a[1]));
     } else {
-      categoriesEntries.sort((a, b) => Number.parseFloat(a[0]) - Number.parseFloat(b[0]));
+      // TODO: remove hacks
+      categoriesEntries.sort((a, b) => {
+        if (a[0] === 'sum') {
+          return 1;
+        } if (b[0] === 'sum') {
+          return -1;
+        }
+        const dateA = parseDate(a[0]);
+        const dateB = parseDate(b[0]);
+        return dateA.getTime() - dateB.getTime();
+      });
     }
     const categoriesString = categoriesEntries.map(([category, amount]) => {
       const categoryString = category.padEnd(15);

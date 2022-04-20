@@ -61,6 +61,7 @@ export const HANDLERS = {
       const expensesString = printExpensesBySymbolsByCategories(expenses, responseHeader);
       await ctx.replyWithMarkdownV2(expensesString);
     } catch (e) {
+      console.error(e);
       await ctx.reply(TOKENS.FETCH_ERROR);
     }
   },
@@ -72,6 +73,7 @@ export const HANDLERS = {
       const expensesString = printExpensesBySymbolsByDays(expenses, responseHeader);
       await ctx.replyWithMarkdownV2(expensesString);
     } catch (e) {
+      console.error(e);
       await ctx.reply(TOKENS.FETCH_ERROR);
     }
   },
