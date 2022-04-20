@@ -1,5 +1,6 @@
 import { Scenes, Markup } from 'telegraf';
 import * as fs from 'fs';
+import fetch from 'node-fetch';
 import { HANDLERS } from './handlers';
 import { printExpenses, printTransaction, printTransactionList } from './print';
 import { TOKENS, CALLBACK_BUTTONS } from './tokens';
