@@ -37,7 +37,8 @@ export interface MySession extends Scenes.SceneSession<MySceneSession> {
     symbol: string,
     amount: number,
     category: string,
-  }[]
+  }[],
+  timezone: number
 }
 
 export interface MyContext extends Context {

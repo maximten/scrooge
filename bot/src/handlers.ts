@@ -51,6 +51,10 @@ export const HANDLERS = {
         CALLBACK_BUTTONS.showTotal[0],
         CALLBACK_BUTTONS.showTotal[1],
       )],
+      [Markup.button.callback(
+        CALLBACK_BUTTONS.setTimezone[0],
+        CALLBACK_BUTTONS.setTimezone[1],
+      )],
     ]));
   },
   RANGE_EXPENSES_CATEGORIES: async (ctx: MyContext, apiPath: string, responseHeader: string) => {

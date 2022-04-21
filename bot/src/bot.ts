@@ -22,6 +22,7 @@ import {
   addTransactionFileScene,
   confirmTransactionFileScene,
   setDateScene,
+  setTimezoneScene,
 } from './scenes';
 
 require('dotenv').config();
@@ -47,6 +48,7 @@ const stage = new Scenes.Stage<MyContext>([
   confirmTransactionScene,
   addTransactionFileScene,
   confirmTransactionFileScene,
+  setTimezoneScene,
 ]);
 
 const init = async () => {
@@ -123,6 +125,10 @@ const init = async () => {
   });
   bot.action(CALLBACK_BUTTONS.showMonthExpensesByDay[1], async (ctx) => {
     await HANDLERS.RANGE_EXPENSES_DAYS(ctx, '/month_expenses_by_day', 'Расходы за месяц');
+  });
+  bot.action(CALLBACK_BUTTONS.setTimezone[1], async (ctx) => {
+    await ctx.answerCbQuery();
+    ctx.scene.enter('setTimezoneScene');
   });
   process.once('SIGINT', () => {
     bot.stop('SIGINT');

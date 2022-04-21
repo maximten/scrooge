@@ -9,6 +9,7 @@ export const CALLBACK_BUTTONS = {
   showMonthExpensesByCategory: ['🌚 Расходы за месяц по категориям', 'showMonthExpensesByCategory'],
   showMonthExpensesByDay: ['🌚 Расходы за месяц по дням', 'showMonthExpensesByDay'],
   addTransactionFile: ['🗃 Добавить файл с транзакциями', 'addTransactionFile'],
+  setTimezone: ['🕰 Выбрать часовую зону', 'setTimezone'],
   showTotal: ['💰 Показать сумму', 'showSum'],
   today: ['Сегодня', 'today'],
   yesterday: ['Вчера', 'yesterday'],
@@ -31,4 +32,8 @@ export const TOKENS = {
   TRANSACTION_SAVE_SUCCESS: 'Транзакция сохранена',
   REQUEST_TRANSACTION_FILE: 'Скинь файл заполненный по примеру',
   TRANSACTION_LIST_SAVE_SUCCESS: 'Транзакции сохранены',
+  CURRENT_TIMEZONE: 'Текущая часовая зона:',
+  SET_TIMEZONE_REQUEST: 'Введи часовую зону в формате +-nn',
+  TIMEZONE_ERROR: 'Неверная часовая зона',
+  SET_TIMEZONE_SUCCESS: 'Часовая зона установлена',
 };

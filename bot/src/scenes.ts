@@ -262,3 +262,26 @@ confirmTransactionFileScene.on('callback_query', async (ctx) => {
     await HANDLERS.START(ctx);
   }
 });
+
+export const setTimezoneScene = new Scenes.BaseScene<MyContext>('setTimezoneScene');
+setTimezoneScene.enter(async (ctx) => {
+  const { timezone } = ctx.session || 0;
+  const timezoneString = timezone > 0 ? `+${timezone}` : timezone;
+  await ctx.reply(`${TOKENS.CURRENT_TIMEZONE} ${timezoneString}`);
+  await ctx.reply(TOKENS.SET_TIMEZONE_REQUEST);
+});
+setTimezoneScene.on('text', async (ctx) => {
+  const { text } = ctx.message;
+  const timezone = Number.parseInt(text, 10);
+  if (Number.isNaN(timezone)) {
+    await ctx.reply(TOKENS.TIMEZONE_ERROR);
+    return;
+  }
+  if (Math.abs(timezone) > 24) {
+    await ctx.reply(TOKENS.TIMEZONE_ERROR);
+    return;
+  }
+  ctx.session.timezone = timezone;
+  await ctx.reply(TOKENS.SET_TIMEZONE_SUCCESS);
+  await ctx.scene.leave();
+});
