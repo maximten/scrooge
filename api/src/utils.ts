@@ -15,7 +15,7 @@ export const connectToMongo = async (host: string) => {
     process.exit(1);
   }
   await mongoose.connect(`mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@${host
-  }/scrooge`);
+  }/${process.env.MONGO_DB}`);
 };
 
 export const getDayRange = (date: Date) => {
