@@ -1,7 +1,7 @@
 import bodyParser from 'body-parser';
 import express from 'express';
 import { Transaction } from './models';
-import { connectToMongo } from './utils';
+import { connectToMongo, getTimezone } from './utils';
 import { exchangesController, transactionController } from './controllers';
 
 require('dotenv').config();
@@ -29,17 +29,17 @@ const init = async () => {
   });
   app.post('/transaction', async (req, res) => {
     const { body } = req;
-    const transaction = new Transaction({
+    const dto = {
       date: body.date,
       symbol: body.symbol,
       amount: body.amount,
       category: body.category,
-    });
+    };
     try {
-      await transaction.validate();
-      await transaction.save();
+      await transactionController.addTransaction(dto);
       res.sendStatus(200);
-    } catch {
+    } catch (e) {
+      console.error(e);
       res.sendStatus(400);
     }
   });
@@ -53,14 +53,16 @@ const init = async () => {
     }
   });
   app.get('/day_expenses', async (req, res) => {
+    const timezone = getTimezone(req.query.timezone);
     const today = new Date();
-    const expenses = await transactionController.getDayExpenses(today);
+    const expenses = await transactionController.getDayExpenses(today, timezone);
     res.send({
       date: today,
       expenses,
     });
   });
   app.get('/date_expenses', async (req, res) => {
+    const timezone = getTimezone(req.query.timezone);
     const { year, month, day } = req.query;
     if (!year || !month || !day) {
       res.sendStatus(400);
@@ -72,7 +74,7 @@ const init = async () => {
       res.sendStatus(400);
     }
     const date = new Date(yearNum, monthNum - 1, dayNum);
-    const expenses = await transactionController.getDayExpenses(date);
+    const expenses = await transactionController.getDayExpenses(date, timezone);
     res.send({
       date,
       expenses,
@@ -93,13 +95,14 @@ const init = async () => {
     });
   });
   app.get('/30_day_expenses_by_day', async (req, res) => {
+    const timezone = getTimezone(req.query.timezone);
     const date = new Date();
     const {
       transactionsBySymbol,
       convertedTransactionsBySymbol,
       totalSum,
     } = await transactionController
-      .get30DaysExpensesGroupedByDay(date);
+      .get30DaysExpensesGroupedByDay(date, timezone);
     res.send({
       transactionsBySymbol,
       convertedTransactionsBySymbol,
@@ -107,13 +110,14 @@ const init = async () => {
     });
   });
   app.get('/week_expenses_by_category', async (req, res) => {
+    const timezone = getTimezone(req.query.timezone);
     const date = new Date();
     const {
       transactionsBySymbol,
       convertedTransactionsBySymbol,
       totalSum,
     } = await transactionController
-      .getWeekExpensesGroupedByCategory(date);
+      .getWeekExpensesGroupedByCategory(date, timezone);
     res.send({
       transactionsBySymbol,
       convertedTransactionsBySymbol,
@@ -121,13 +125,14 @@ const init = async () => {
     });
   });
   app.get('/week_expenses_by_day', async (req, res) => {
+    const timezone = getTimezone(req.query.timezone);
     const date = new Date();
     const {
       transactionsBySymbol,
       convertedTransactionsBySymbol,
       totalSum,
     } = await transactionController
-      .getWeekExpensesGroupedByDay(date);
+      .getWeekExpensesGroupedByDay(date, timezone);
     res.send({
       transactionsBySymbol,
       convertedTransactionsBySymbol,
@@ -135,13 +140,14 @@ const init = async () => {
     });
   });
   app.get('/month_expenses_by_category', async (req, res) => {
+    const timezone = getTimezone(req.query.timezone);
     const date = new Date();
     const {
       transactionsBySymbol,
       convertedTransactionsBySymbol,
       totalSum,
     } = await transactionController
-      .getMonthExpensesGroupedByCategory(date);
+      .getMonthExpensesGroupedByCategory(date, timezone);
     res.send({
       transactionsBySymbol,
       convertedTransactionsBySymbol,
@@ -149,13 +155,14 @@ const init = async () => {
     });
   });
   app.get('/month_expenses_by_day', async (req, res) => {
+    const timezone = getTimezone(req.query.timezone);
     const date = new Date();
     const {
       transactionsBySymbol,
       convertedTransactionsBySymbol,
       totalSum,
     } = await transactionController
-      .getMonthExpensesGroupedByDay(date);
+      .getMonthExpensesGroupedByDay(date, timezone);
     res.send({
       transactionsBySymbol,
       convertedTransactionsBySymbol,

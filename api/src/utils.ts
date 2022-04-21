@@ -18,11 +18,11 @@ export const connectToMongo = async (host: string) => {
   }/${process.env.MONGO_DB}`);
 };
 
-export const getDayRange = (date: Date) => {
+export const getDayRange = (date: Date, timezone: number) => {
   const startDate = new Date(date);
-  startDate.setHours(0, 0, 0);
+  startDate.setHours(-timezone, 0, 0);
   const endDate = new Date(date);
-  endDate.setHours(0, 0, 0);
+  endDate.setHours(-timezone, 0, 0);
   endDate.setDate(endDate.getDate() + 1);
   return [startDate, endDate];
 };
@@ -52,9 +52,11 @@ export const extractDataFromCsv = (dataString: string) => {
   return data;
 };
 
-export const getWeekDays = (date: Date) => {
+export const getWeekDays = (date: Date, timezone: number) => {
   const days = [];
   let currentDate = new Date(date);
+  currentDate.setDate(currentDate.getDate() + 1);
+  currentDate.setHours(-timezone, 0, 0);
   if (currentDate.getDay() === 0) {
     days.push(currentDate);
     currentDate = new Date(currentDate);
@@ -68,14 +70,26 @@ export const getWeekDays = (date: Date) => {
   return days;
 };
 
-export const getMonthDays = (date: Date) => {
+export const getMonthDays = (date: Date, timezone: number) => {
   const month = date.getMonth();
   const days = [];
   let currentDate = new Date(date);
+  currentDate.setDate(currentDate.getDate() + 1);
+  currentDate.setHours(-timezone, 0, 0);
   while (currentDate.getDate() >= 1 && currentDate.getMonth() === month) {
     days.push(currentDate);
     currentDate = new Date(currentDate);
     currentDate.setDate(currentDate.getDate() - 1);
   }
   return days;
+};
+
+export const getTimezone = (timezoneString: any) => {
+  if (typeof timezoneString === 'string') {
+    const timezone = Number.parseInt(timezoneString as string, 10);
+    if (!Number.isNaN(timezone)) {
+      return timezone;
+    }
+  }
+  return 0;
 };

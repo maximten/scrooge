@@ -1,12 +1,28 @@
 import bigDecimal from 'js-big-decimal';
 import mongoose from 'mongoose';
-import { ExchangeRateUSD, Transaction } from '../models';
+import {
+  ExchangeRateUSD, Transaction, TransactionDto,
+} from '../models';
 import {
   convertSum, getDayRange, getMonthDays, getWeekDays,
 } from '../utils';
 import { exchangesController } from './exchangesController';
 
 export const transactionController = {
+  addTransaction: async (dto: TransactionDto) => {
+    const transaction = new Transaction({
+      ...dto,
+    });
+    await transaction.validate();
+    await transaction.save();
+    const transactionsSymbols = await transactionController.getSymbols();
+    const symbolsWithRates = await exchangesController.getSymbolsWithRates();
+    if (transactionsSymbols.length > symbolsWithRates.length) {
+      const diff = transactionsSymbols.filter((s) => !symbolsWithRates.includes(s));
+      const promises = diff.map((s) => exchangesController.importRate(s));
+      await Promise.all(promises);
+    }
+  },
   getMonthRange: async () => Transaction.aggregate([
     { $group: { _id: { year: { $year: '$date' }, month: { $month: '$date' } } } },
   ]),
@@ -26,8 +42,8 @@ export const transactionController = {
     const categoriesList = categories.map((i) => i._id);
     return categoriesList;
   },
-  getDayExpenses: async (date: Date) => {
-    const [start, end] = getDayRange(date);
+  getDayExpenses: async (date: Date, timezone: number) => {
+    const [start, end] = getDayRange(date, timezone);
     const expenses = await Transaction.find({
       date: { $gte: start, $lt: end },
       amount: { $lt: 0 },
@@ -129,7 +145,8 @@ export const transactionController = {
       totalSum,
     };
   },
-  getExpensesOnDateRangeGroupedByDay: async (startDate: Date, endDate: Date) => {
+  getExpensesOnDateRangeGroupedByDay: async (startDate: Date, endDate: Date, timezone: number) => {
+    const timezoneString = timezone >= 0 ? `+${timezone.toString().padStart(2, '0')}` : `-${timezone.toString().padStart(2, '0')}`;
     const transactions: {
       _id: { symbol: string, date: string },
       sum: mongoose.Types.Decimal128
@@ -143,6 +160,7 @@ export const transactionController = {
               $dateToString: {
                 format: '%Y-%m-%d',
                 date: '$date',
+                timezone: timezoneString,
               },
             },
           },
@@ -186,43 +204,43 @@ export const transactionController = {
       .getExpensesOnDateRangeGroupedByCategory(startDate, date);
     return result;
   },
-  get30DaysExpensesGroupedByDay: async (date: Date) => {
+  get30DaysExpensesGroupedByDay: async (date: Date, timezone: number) => {
     const startDate = new Date(date);
     startDate.setDate(startDate.getDate() - 30);
     const result = await transactionController
-      .getExpensesOnDateRangeGroupedByDay(startDate, date);
+      .getExpensesOnDateRangeGroupedByDay(startDate, date, timezone);
     return result;
   },
-  getWeekExpensesGroupedByCategory: async (date: Date) => {
-    const days = getWeekDays(date);
+  getWeekExpensesGroupedByCategory: async (date: Date, timezone: number) => {
+    const days = getWeekDays(date, timezone);
     const endDate = days[0];
     const startDate = days[days.length - 1];
     const result = await transactionController
       .getExpensesOnDateRangeGroupedByCategory(startDate, endDate);
     return result;
   },
-  getWeekExpensesGroupedByDay: async (date: Date) => {
-    const days = getWeekDays(date);
+  getWeekExpensesGroupedByDay: async (date: Date, timezone: number) => {
+    const days = getWeekDays(date, timezone);
     const endDate = days[0];
     const startDate = days[days.length - 1];
     const result = await transactionController
-      .getExpensesOnDateRangeGroupedByDay(startDate, endDate);
+      .getExpensesOnDateRangeGroupedByDay(startDate, endDate, timezone);
     return result;
   },
-  getMonthExpensesGroupedByCategory: async (date: Date) => {
-    const days = getMonthDays(date);
+  getMonthExpensesGroupedByCategory: async (date: Date, timezone: number) => {
+    const days = getMonthDays(date, timezone);
     const endDate = days[0];
     const startDate = days[days.length - 1];
     const result = await transactionController
       .getExpensesOnDateRangeGroupedByCategory(startDate, endDate);
     return result;
   },
-  getMonthExpensesGroupedByDay: async (date: Date) => {
-    const days = getMonthDays(date);
+  getMonthExpensesGroupedByDay: async (date: Date, timezone: number) => {
+    const days = getMonthDays(date, timezone);
     const endDate = days[0];
     const startDate = days[days.length - 1];
     const result = await transactionController
-      .getExpensesOnDateRangeGroupedByDay(startDate, endDate);
+      .getExpensesOnDateRangeGroupedByDay(startDate, endDate, timezone);
     return result;
   },
 };

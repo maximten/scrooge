@@ -3,13 +3,16 @@ import * as fs from 'fs';
 import fetch from 'node-fetch';
 import { HANDLERS } from './handlers';
 import { printExpenses, printTransaction, printTransactionList } from './print';
-import { TOKENS, CALLBACK_BUTTONS } from './tokens';
+import { TOKENS, CALLBACK_BUTTONS, COMMANDS } from './tokens';
 import { MyContext, DateExpensesResponse } from './types';
 import { extractDataFromCsv } from './utils';
 
 export const showDateScene = new Scenes.BaseScene<MyContext>('showDateScene');
 showDateScene.enter((ctx) => ctx.reply('Введите дату'));
-showDateScene.command('stop', async (ctx) => ctx.scene.leave());
+showDateScene.command(COMMANDS.STOP, async (ctx) => {
+  await ctx.scene.leave();
+  await HANDLERS.START(ctx);
+});
 showDateScene.on('text', async (ctx) => {
   const dateString = ctx.message.text;
   const date = new Date(dateString);
@@ -21,7 +24,8 @@ showDateScene.on('text', async (ctx) => {
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const day = date.getDate();
-    const res = await fetch(`${process.env.API_HOST}/date_expenses?year=${year}&month=${month}&day=${day}`);
+    const timezone = ctx.session.timezone || 0;
+    const res = await fetch(`${process.env.API_HOST}/date_expenses?year=${year}&month=${month}&day=${day}&timezone=${timezone}`);
     const { date: dateString, expenses } = await res.json() as DateExpensesResponse;
     const resultDate = new Date(dateString);
     const result = printExpenses(resultDate, expenses);
@@ -62,6 +66,10 @@ setDateScene.action(CALLBACK_BUTTONS.yesterday[1], async (ctx) => {
   await ctx.answerCbQuery();
   ctx.scene.enter('setSymbolScene');
 });
+setDateScene.command(COMMANDS.STOP, async (ctx) => {
+  await ctx.scene.leave();
+  await HANDLERS.START(ctx);
+});
 setDateScene.on('text', async (ctx) => {
   const date = new Date(ctx.message.text);
   if (date.toString() === 'Invalid Date') {
@@ -92,6 +100,10 @@ setSymbolScene.on('callback_query', async (ctx) => {
   ctx.session.symbol = query.data;
   ctx.scene.enter('setAmountScene');
 });
+setSymbolScene.command(COMMANDS.STOP, async (ctx) => {
+  await ctx.scene.leave();
+  await HANDLERS.START(ctx);
+});
 setSymbolScene.on('text', async (ctx) => {
   ctx.session.symbol = ctx.message.text;
   ctx.scene.enter('setAmountScene');
@@ -99,6 +111,14 @@ setSymbolScene.on('text', async (ctx) => {
 
 export const setAmountScene = new Scenes.BaseScene<MyContext>('setAmountScene');
 setAmountScene.enter((ctx) => ctx.reply(TOKENS.SET_AMOUNT_REQUEST));
+setAmountScene.command(COMMANDS.STOP, async (ctx) => {
+  await ctx.scene.leave();
+  await HANDLERS.START(ctx);
+});
+setAmountScene.command(COMMANDS.STOP, async (ctx) => {
+  await ctx.scene.leave();
+  await HANDLERS.START(ctx);
+});
 setAmountScene.on('text', async (ctx) => {
   const amountString = ctx.message.text;
   const amount = Number.parseFloat(amountString);
@@ -136,11 +156,19 @@ setCategoryScene.on('callback_query', async (ctx) => {
   ctx.session.category = query.data;
   ctx.scene.enter('confirmTransactionScene');
 });
+setCategoryScene.command(COMMANDS.STOP, async (ctx) => {
+  await ctx.scene.leave();
+  await HANDLERS.START(ctx);
+});
+setCategoryScene.on('text', async (ctx) => {
+  ctx.session.category = ctx.message.text;
+  ctx.scene.enter('confirmTransactionScene');
+});
 
 export const confirmTransactionScene = new Scenes.BaseScene<MyContext>('confirmTransactionScene');
 confirmTransactionScene.enter(async (ctx) => {
   const transaction = {
-    date: ctx.session.date,
+    date: new Date(ctx.session.date),
     symbol: ctx.session.symbol,
     amount: ctx.session.amount,
     category: ctx.session.category,
@@ -223,6 +251,10 @@ addTransactionFileScene.on('document', async (ctx) => {
   ctx.session.transactionList = transactionList;
   ctx.scene.enter('confirmTransactionFile');
 });
+addTransactionFileScene.command(COMMANDS.STOP, async (ctx) => {
+  await ctx.scene.leave();
+  await HANDLERS.START(ctx);
+});
 
 export const confirmTransactionFileScene = new Scenes.BaseScene<MyContext>('confirmTransactionFile');
 confirmTransactionFileScene.enter(async (ctx) => {
@@ -262,6 +294,10 @@ confirmTransactionFileScene.on('callback_query', async (ctx) => {
     await HANDLERS.START(ctx);
   }
 });
+confirmTransactionFileScene.command(COMMANDS.STOP, async (ctx) => {
+  await ctx.scene.leave();
+  await HANDLERS.START(ctx);
+});
 
 export const setTimezoneScene = new Scenes.BaseScene<MyContext>('setTimezoneScene');
 setTimezoneScene.enter(async (ctx) => {
@@ -269,6 +305,10 @@ setTimezoneScene.enter(async (ctx) => {
   const timezoneString = timezone > 0 ? `+${timezone}` : timezone;
   await ctx.reply(`${TOKENS.CURRENT_TIMEZONE} ${timezoneString}`);
   await ctx.reply(TOKENS.SET_TIMEZONE_REQUEST);
+});
+setTimezoneScene.command(COMMANDS.STOP, async (ctx) => {
+  await ctx.scene.leave();
+  await HANDLERS.START(ctx);
 });
 setTimezoneScene.on('text', async (ctx) => {
   const { text } = ctx.message;

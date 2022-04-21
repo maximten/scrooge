@@ -101,7 +101,7 @@ export const getCategoriesCommand = async () => {
 };
 export const getTodayExpensesCommand = async () => {
   const today = new Date();
-  const expenses = await transactionController.getDayExpenses(today);
+  const expenses = await transactionController.getDayExpenses(today, 0);
   console.log(JSON.stringify(expenses));
 };
 
@@ -121,7 +121,7 @@ const getArgsForGetDateExpensesCommand = () => {
 export const getDateExpensesCommand = async () => {
   const { year, month, day } = getArgsForGetDateExpensesCommand();
   const date = new Date(year, month - 1, day);
-  const expenses = await transactionController.getDayExpenses(date);
+  const expenses = await transactionController.getDayExpenses(date, 0);
   console.log(JSON.stringify(expenses));
 };
 
@@ -161,24 +161,24 @@ export const updateRatesCommand = async () => {
 
 export const getWeekExpensesGroupedByCategoryCommand = async () => {
   const date = new Date();
-  const expenses = await transactionController.getWeekExpensesGroupedByCategory(date);
+  const expenses = await transactionController.getWeekExpensesGroupedByCategory(date, 0);
   console.log(JSON.stringify(expenses));
 };
 
 export const getWeekExpensesGroupedByDayCommand = async () => {
   const date = new Date();
-  const expenses = await transactionController.getWeekExpensesGroupedByDay(date);
+  const expenses = await transactionController.getWeekExpensesGroupedByDay(date, 0);
   console.log(JSON.stringify(expenses));
 };
 
 export const getMonthExpensesGroupedByCategoryCommand = async () => {
   const date = new Date();
-  const expenses = await transactionController.getMonthExpensesGroupedByCategory(date);
+  const expenses = await transactionController.getMonthExpensesGroupedByCategory(date, 0);
   console.log(JSON.stringify(expenses));
 };
 
 export const getMonthExpensesGroupedByDayCommand = async () => {
   const date = new Date();
-  const expenses = await transactionController.getMonthExpensesGroupedByDay(date);
+  const expenses = await transactionController.getMonthExpensesGroupedByDay(date, 0);
   console.log(JSON.stringify(expenses));
 };

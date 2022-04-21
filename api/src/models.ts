@@ -32,3 +32,10 @@ exchangeRateUSDSchema.index({ date: 1, symbol: 1 }, { unique: true });
 
 export const Transaction = mongoose.model<ITransaction>('Transaction', transactionSchema);
 export const ExchangeRateUSD = mongoose.model<IExchangeRateUSD>('ExchangeRateUSD', exchangeRateUSDSchema);
+
+export type TransactionDto = {
+  date: string,
+  amount: string,
+  symbol: string,
+  category: string
+};

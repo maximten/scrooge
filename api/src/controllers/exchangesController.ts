@@ -36,6 +36,12 @@ const getStartEndDate = () => {
 };
 
 export const exchangesController = {
+  getSymbolsWithRates: async () => {
+    const symbols: { _id: string }[] = await ExchangeRateUSD.aggregate([
+      { $group: { _id: '$symbol' } },
+    ]).exec();
+    return symbols.map((i) => i._id);
+  },
   importRate: async (symbol: string) => {
     const { startDate, endDate } = getStartEndDate();
     const existingRates = await ExchangeRateUSD.find({

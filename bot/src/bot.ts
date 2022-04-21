@@ -11,7 +11,7 @@ import {
   printExpenses,
   printTotal,
 } from './print';
-import { CALLBACK_BUTTONS, TOKENS } from './tokens';
+import { CALLBACK_BUTTONS, COMMANDS, TOKENS } from './tokens';
 import { HANDLERS } from './handlers';
 import {
   showDateScene,
@@ -70,7 +70,7 @@ const init = async () => {
       await next();
     }
   });
-  bot.command('start', HANDLERS.START);
+  bot.command(COMMANDS.START, HANDLERS.START);
   bot.action(CALLBACK_BUTTONS.addTransaction[1], async (ctx) => {
     await ctx.answerCbQuery();
     ctx.scene.enter('setDateScene');
@@ -82,7 +82,8 @@ const init = async () => {
   bot.action(CALLBACK_BUTTONS.showTodayExpenses[1], async (ctx) => {
     await ctx.answerCbQuery();
     try {
-      const res = await fetch(`${process.env.API_HOST}/day_expenses`);
+      const timezone = ctx.session.timezone || 0;
+      const res = await fetch(`${process.env.API_HOST}/day_expenses?timezone=${timezone}`);
       const { date: dateString, expenses } = await res.json() as DateExpensesResponse;
       const resultDate = new Date(dateString);
       const result = printExpenses(resultDate, expenses);

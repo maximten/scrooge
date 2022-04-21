@@ -60,7 +60,8 @@ export const HANDLERS = {
   RANGE_EXPENSES_CATEGORIES: async (ctx: MyContext, apiPath: string, responseHeader: string) => {
     await ctx.answerCbQuery();
     try {
-      const res = await fetch(`${process.env.API_HOST}${apiPath}`);
+      const timezone = ctx.session.timezone || 0;
+      const res = await fetch(`${process.env.API_HOST}${apiPath}?timezone=${timezone}`);
       const expenses = await res.json() as RangeExpensesResponse;
       const expensesString = printExpensesBySymbolsByCategories(expenses, responseHeader);
       await ctx.replyWithMarkdownV2(expensesString);
@@ -72,7 +73,8 @@ export const HANDLERS = {
   RANGE_EXPENSES_DAYS: async (ctx: MyContext, apiPath: string, responseHeader: string) => {
     await ctx.answerCbQuery();
     try {
-      const res = await fetch(`${process.env.API_HOST}${apiPath}`);
+      const timezone = ctx.session.timezone || 0;
+      const res = await fetch(`${process.env.API_HOST}${apiPath}?timezone=${timezone}`);
       const expenses = await res.json() as RangeExpensesResponse;
       const expensesString = printExpensesBySymbolsByDays(expenses, responseHeader);
       await ctx.replyWithMarkdownV2(expensesString);

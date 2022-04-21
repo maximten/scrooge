@@ -1,3 +1,8 @@
+export const COMMANDS = {
+  START: 'start',
+  STOP: 'stop',
+};
+
 export const CALLBACK_BUTTONS = {
   addTransaction: ['➕ Добавить транзакцию', 'addTransaction'],
   showTodayExpenses: ['🕥 Расходы сегодня', 'showTodayExpenses'],
