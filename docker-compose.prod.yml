@@ -5,24 +5,9 @@ services:
     image: scrooge-api
     volumes:
       - ./api/.env:/app/.env
-    labels:
-      - "traefik.http.routers.api.rule=Host(`${API_HOST_PROD}`)"
-      - "traefik.docker.network=proxy"
-      - "traefik.http.routers.api.middlewares=apiAuth@docker"
     networks:
-      - proxy
+      - web
       - internal
-    restart: always
-
-  app:
-    image: scrooge-app
-    volumes:
-      - ./app/.env:/app/.env
-    labels:
-      - "traefik.http.routers.app.rule=Host(`${APP_HOST_PROD}`)"
-      - "traefik.http.routers.app.middlewares=apiAuth@docker"
-    networks:
-      - proxy
     restart: always
 
   bot:
@@ -30,7 +15,7 @@ services:
     volumes:
       - ./bot/.env:/app/.env
     networks:
-      - proxy
+      - web
       - internal
     restart: always
 
@@ -41,7 +26,16 @@ services:
     depends_on:
       - api
     restart: always
-          
+
+  redis:
+    image: redis:6.2.6
+    command: redis-server --save 60 1
+    volumes:
+     - ./redis:/data
+    networks:
+      - internal
+    restart: always
+
   mongo:
     image: mongo:5.0.5
     environment:
@@ -61,5 +55,5 @@ services:
 networks:
   internal:
     internal: true
-  proxy:
-    name: proxy
+  web:
+    internal: false

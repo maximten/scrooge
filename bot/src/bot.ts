@@ -1,9 +1,9 @@
 import {
   Telegraf,
-  session,
   Scenes,
 } from 'telegraf';
 import fetch from 'node-fetch';
+import RedisSession from 'telegraf-session-redis';
 import {
   TotalResponse, MyContext, DateExpensesResponse,
 } from './types';
@@ -53,7 +53,13 @@ const init = async () => {
   const bot = new Telegraf<MyContext>(
     process.env.BOT_TOKEN as string,
   );
-  bot.use(session());
+  const session = new RedisSession({
+    store: {
+      host: process.env.REDIS_HOST || '127.0.0.1',
+      port: process.env.REDIS_PORT || 6379,
+    },
+  });
+  bot.use(session);
   bot.use(stage.middleware());
   bot.on('text', async (ctx, next) => {
     if (ctx.from.username !== process.env.AUTHORIZED_USER) {

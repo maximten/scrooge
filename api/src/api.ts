@@ -1,5 +1,4 @@
 import bodyParser from 'body-parser';
-import cors from 'cors';
 import express from 'express';
 import { Transaction } from './models';
 import { connectToMongo } from './utils';
@@ -10,10 +9,6 @@ require('dotenv').config();
 const init = async () => {
   const app = express();
   app.use(bodyParser.json());
-  app.use(cors({
-    origin: process.env.APP_HOST,
-    credentials: true,
-  }));
   await connectToMongo(process.env.MONGO_HOST as string);
   app.use((req, res, next) => {
     console.log(req.path);
