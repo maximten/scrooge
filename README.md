@@ -1,6 +1,8 @@
 # Scrooge 🦆
 Selfhosted assets and expenses service based on Telegram bot
 
+![Image](./img.jpg)
+
 ## Features
 * Save expenses and profits in different currencies
 * Get assets total converted in USD
