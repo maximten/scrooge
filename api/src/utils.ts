@@ -84,7 +84,7 @@ export const getMonthDays = (date: Date, timezone: number) => {
   return days;
 };
 
-export const getTimezone = (timezoneString: any) => {
+export const getTimezone = (timezoneString: unknown) => {
   if (typeof timezoneString === 'string') {
     const timezone = Number.parseInt(timezoneString as string, 10);
     if (!Number.isNaN(timezone)) {
