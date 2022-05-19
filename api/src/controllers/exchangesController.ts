@@ -113,7 +113,7 @@ export const exchangesController = {
       }, {} as Record<string, Record<string, string>>);
     return convertedCategoriesBySymbols;
   },
-  exchagneMap: async (date: Date, map: Record<string, string>) => {
+  exchangeMap: async (date: Date, map: Record<string, string>) => {
     const symbols = Object.keys(map);
     const ratesMap = await exchangesController.getRatesOfSymbolsByDate(date, symbols);
     const convertedMap = Object.entries(map)

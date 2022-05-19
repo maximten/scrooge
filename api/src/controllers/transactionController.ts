@@ -59,7 +59,7 @@ export const transactionController = {
       sumsBySymbol[item.symbol] = bigDecimal.add(sumsBySymbol[item.symbol], item.amount.toString());
       return carry;
     }, {} as Record<string, { category: string, amount: string }[]>);
-    const convertedSumBySymbol = await exchangesController.exchagneMap(date, sumsBySymbol);
+    const convertedSumBySymbol = await exchangesController.exchangeMap(date, sumsBySymbol);
     const convertedExpensesBySymbol = await exchangesController
       .exchangeListsBySymbol(date, expensesBySymbol);
     const totalSum = Object.values(convertedSumBySymbol)
