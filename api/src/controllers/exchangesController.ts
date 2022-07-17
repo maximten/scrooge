@@ -10,6 +10,7 @@ const SYMBOL_MAP: Record<string, string> = {
   EUR: 'EURUSD=X',
   GBP: 'GBPUSD',
   AED: 'AED=X',
+  ILS: 'ILSUSD=X',
 };
 
 const INVERT_MAP: Record<string, boolean> = {
