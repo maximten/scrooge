@@ -5,3 +5,4 @@ dump
 dist
 userfile
 redis
+dump.tar.gz
