@@ -11,10 +11,14 @@ const SYMBOL_MAP: Record<string, string> = {
   GBP: 'GBPUSD',
   AED: 'AED=X',
   ILS: 'ILSUSD=X',
+  PROPORTUNITY: 'KZT=X',
+  IKAPITALIST: 'KZT=X',
 };
 
 const INVERT_MAP: Record<string, boolean> = {
   KZT: true,
+  PROPORTUNITY: true,
+  IKAPITALIST: true,
   AED: true,
 };
 
