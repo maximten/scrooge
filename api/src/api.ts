@@ -175,6 +175,12 @@ const init = async () => {
     await Promise.all(symbolsPromise);
     res.send('ok');
   });
+  app.get('/year_balance', async (req, res) => {
+    const year = parseInt(req.query.year?.toString() || '', 10);
+    const result = await transactionController.getYearBalance(year);
+    const csv = result.map(row => row.join(',')).join("\n");
+    res.send(csv);
+  });
   app.listen(8080, () => {
     console.log('listening on 8080');
   });

@@ -89,6 +89,7 @@ export const exchangesController = {
       rate: string,
       inverted: boolean
     }>);
+    ratesMap['USDT'] = { rate: '1', inverted: false };
     return ratesMap;
   },
   exchangeMapBySymbol: async (

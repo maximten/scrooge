@@ -145,6 +145,41 @@ export const transactionController = {
       totalSum,
     };
   },
+  getSumsOnDateRangeGroupedByCategory: async (startDate: Date, endDate: Date) => {
+    const transactions: {
+      _id: { symbol: string, category: string },
+      sum: mongoose.Types.Decimal128
+    }[] = await Transaction.aggregate([
+      { $match: { date: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: { symbol: '$symbol', category: '$category' }, sum: { $sum: '$amount' } } },
+    ]).exec();
+    const transactionsBySymbol: Record<string, Record<string, string>> = {};
+    transactions.forEach((item) => {
+      if (!transactionsBySymbol[item._id.symbol]) {
+        transactionsBySymbol[item._id.symbol] = {};
+      }
+      transactionsBySymbol[item._id.symbol][item._id.category] = item.sum.toString();
+      if (!transactionsBySymbol[item._id.symbol].sum) {
+        transactionsBySymbol[item._id.symbol].sum = '0';
+      }
+      transactionsBySymbol[item._id.symbol].sum = bigDecimal.add(
+        transactionsBySymbol[item._id.symbol].sum,
+        item.sum.toString(),
+      );
+    });
+    const convertedTransactionsBySymbol = await exchangesController
+      .exchangeMapBySymbol(endDate, transactionsBySymbol);
+    const totalSum = Object.entries(convertedTransactionsBySymbol)
+      .reduce((carry, [, categories]) => {
+        carry = bigDecimal.add(carry, categories.sum);
+        return carry;
+      }, '0');
+    return {
+      transactionsBySymbol,
+      convertedTransactionsBySymbol,
+      totalSum,
+    };
+  },
   getExpensesOnDateRangeGroupedByDay: async (startDate: Date, endDate: Date, timezone: number) => {
     const timezoneString = timezone >= 0 ? `+${timezone.toString().padStart(2, '0')}` : `-${timezone.toString().padStart(2, '0')}`;
     const transactions: {
@@ -243,4 +278,58 @@ export const transactionController = {
       .getExpensesOnDateRangeGroupedByDay(startDate, endDate, timezone);
     return result;
   },
+  getMonthSumsGroupedByCategory: async (date: Date, timezone: number) => {
+    const days = getMonthDays(date, timezone);
+    const endDate = days[0];
+    const startDate = days[days.length - 1];
+    const result = await transactionController
+      .getSumsOnDateRangeGroupedByCategory(startDate, endDate);
+    return result;
+  },
+  getYearBalance: async (year: number) => {
+    const months = [...(new Array(12))].map((i, k) => k)
+      .map(m => new Date(`${year}.${m + 1}.01`))
+      .map(m => {
+        const m2 = new Date(m);
+        m2.setMonth(m.getMonth() + 1);
+        m2.setDate(-1);
+        return m2;
+      });
+    const lastMonth = new Date(`${year + 1}.02.01`);
+    lastMonth.setDate(-1);
+    months.push(lastMonth);
+    const promises = months.map(m => transactionController.getMonthSumsGroupedByCategory(m, 0));
+    const sums = await Promise.all(promises);
+    const categories = await transactionController.getCategories();
+    const categoriesMap = categories.reduce((res, category, i) => {
+      res[category] = i;
+      return res;
+    }, {} as Record<string, number>);
+    const rows = [['', 'sum', ...categories]];
+    const sumRow = Array.from(Array(categories.length)).map(i => '0');
+    let yearSum = '0';
+    months.forEach((m, i) => {
+      const month = m.toLocaleString('default', { month: 'long' });
+      const row = Array.from(Array(categories.length)).map(i => '0');
+      const sum = sums[i];
+      const { convertedTransactionsBySymbol, totalSum } = sum;
+      Object.values(convertedTransactionsBySymbol).forEach(sums => {
+        Object.entries(sums).forEach(([key, val]) => {
+          if (key === 'sum')
+            return;
+          const ind = categoriesMap[key]
+          row[ind] = bigDecimal.add(row[ind].toString(), val.toString());
+          sumRow[ind] = bigDecimal.add(sumRow[ind].toString(), val.toString());
+        })
+      });
+      const finalRow = [month, totalSum.toString(), ...row];
+      yearSum = bigDecimal.add(yearSum, totalSum.toString());
+      rows.push(finalRow)
+    });
+    const meanRow = sumRow.map(sum => bigDecimal.divide(sum, months.length.toString(), 2));
+    const yearMean = bigDecimal.divide(yearSum, months.length.toString(), 2);
+    rows.push(['Sum', yearSum, ...sumRow]);
+    rows.push(['Mean', yearMean, ...meanRow]);
+    return rows;
+  }
 };
