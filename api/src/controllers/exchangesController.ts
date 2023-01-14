@@ -13,12 +13,14 @@ const SYMBOL_MAP: Record<string, string> = {
   ILS: 'ILSUSD=X',
   PROPORTUNITY: 'KZT=X',
   IKAPITALIST: 'KZT=X',
+  MYTAXI: 'KZT=X',
 };
 
 const INVERT_MAP: Record<string, boolean> = {
   KZT: true,
   PROPORTUNITY: true,
   IKAPITALIST: true,
+  MYTAXI: true,
   AED: true,
 };
 
